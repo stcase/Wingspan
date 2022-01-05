@@ -1,0 +1,10 @@
+poetry.lock
+
+__pycache__
+
+/.idea
+
+steamworks/
+steam_api64.dll
+steam_api64.lib
+SteamworksPy64.dll

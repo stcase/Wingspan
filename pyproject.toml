@@ -6,6 +6,7 @@ authors = ["Steven Case <stcinc@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+requests = "^2.26.0"
 
 [tool.poetry.dev-dependencies]
 
