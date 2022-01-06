@@ -22,7 +22,12 @@ class Player(JSONData):
 class GameInfo(JSONData):
     @property
     def current_turn(self) -> Player:
-        return Player(self.data["Match"]["CurrentTurn"]["PlayersWaitingFor"][0])
+        player_id: str = self.data["Match"]["StateData"]["CurrentPlayerID"]
+        players = self.data["Match"]["Players"]
+        for player in players:
+            if player["ChilliConnectID"] == player_id:
+                return Player(player)
+        raise RuntimeError(f"Player match for {player_id} not found in {players}")
 
     @property
     def hours_remaining(self) -> float:

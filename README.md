@@ -20,7 +20,10 @@
 2. Run `poetry run python main.py -h` for next steps
 
 ## References
+Steam
 - https://partner.steamgames.com/doc/features/auth#client_to_client
 - https://partner.steamgames.com/doc/sdk/api#thirdparty
 - https://steamdb.info/app/1054490/
 - https://github.com/philippj/SteamworksPy/
+
+Discord
