@@ -33,6 +33,14 @@ class GameInfo(JSONData):
     def hours_remaining(self) -> float:
         return self.data["Match"]["TurnTimeout"]["SecondsRemaining"]/60/60
 
+    @property
+    def game_id(self):
+        return self.data["Match"]["MatchID"]
+
+    @property
+    def is_valid(self):
+        return "Error" not in self.data
+
 
 class Game(JSONData):
     @property
