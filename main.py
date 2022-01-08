@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 from configs import BOT_SECRET_TOKEN, CHANNEL
 from wingspan_api.wapi import Wapi
@@ -6,6 +7,8 @@ from discord.bot import Bot
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-l", "--list", help="Print active games", action="store_true")
@@ -38,10 +41,8 @@ def print_game_info(match_id):
 
 
 def run_bot():
-    game_ids = {"2af8cd1c-3f89-11ec-93b2-0a686532dcfd", "b8f74c58-46a8-11ec-a406-0207f844f9fb"}
-
     wapi = Wapi()
-    bot = Bot(wapi=wapi, game_ids=game_ids, channel_id=CHANNEL, command_prefix="!")
+    bot = Bot(wapi=wapi, channel_id=CHANNEL, command_prefix="!")
     bot.run(BOT_SECRET_TOKEN)
 
 

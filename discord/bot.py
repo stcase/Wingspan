@@ -1,9 +1,16 @@
-from dataclasses import dataclass
+import json
+import logging
+from dataclasses import dataclass, asdict
+from json import JSONDecodeError
 from typing import Dict, Optional
 
 from nextcord.ext import commands, tasks
 
-from wingspan_api.wapi import GameInfo
+from wingspan_api.wapi import GameInfo, Wapi
+
+STATE_FILE = "state_data.json"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -13,18 +20,32 @@ class Message:
 
 
 class Bot(commands.Bot):
-    def __init__(self, wapi, channel_id: int, game_ids, *args, **kwargs):
+    def __init__(self, wapi: Wapi, channel_id: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.wapi = wapi
         self.channel_id = channel_id
-        self.sent_messages: Dict[str, Optional[Message]] = dict.fromkeys(game_ids)
+        self.sent_messages: Dict[str, Optional[Message]] = {}
         self.subscriptions: Dict[str, set[str]] = {}
+        self.load_data()
 
         # start the task to run in the background
         self.check_turns.start()
 
         self.load_commands()
+
+    def save_data(self):
+        with open(STATE_FILE, "w") as f:
+            json.dump({"messages": {game_id: (asdict(message) if message is not None else None) for game_id, message in self.sent_messages.items()}, "subscriptions": {player: list(ids) for player, ids in self.subscriptions.items()}}, f, indent=2)
+
+    def load_data(self):
+        try:
+            with open(STATE_FILE, "r") as f:
+                data = json.load(f)
+            self.subscriptions = {player: set(ids) for player, ids in data["subscriptions"].items()}
+            self.sent_messages = {game_id: (Message(**message) if message is not None else None) for game_id, message in data["messages"].items()}
+        except JSONDecodeError as e:
+            logger.info(f"Failed to load state file: {e}")
 
     @tasks.loop(minutes=5)
     async def check_turns(self):
@@ -50,6 +71,7 @@ class Bot(commands.Bot):
         else:
             return
         self.sent_messages[game_id] = Message(player=player, hours_remaining=hours_remaining)
+        self.save_data()
 
     @check_turns.before_loop
     async def before_my_task(self):
@@ -76,6 +98,7 @@ class Bot(commands.Bot):
                 else:
                     self.sent_messages[game_id] = None
                     await ctx.reply(f"Now monitoring game_id: {game_id}")
+                    self.save_data()
 
         @self.command()
         async def subscribe(ctx, username: str):
@@ -84,6 +107,7 @@ class Bot(commands.Bot):
             subscriptions.add(ctx.author.id)
             self.subscriptions[username] = subscriptions
             await ctx.reply(f"Now notifying {ctx.author.name} for {username}")
+            self.save_data()
 
         @self.command()
         async def unsubscribe(ctx, username: str):
@@ -94,3 +118,4 @@ class Bot(commands.Bot):
             else:
                 subscriptions.remove(ctx.author.id)
                 await ctx.reply(f"Unsubscribed {ctx.author.name} from {username}")
+                self.save_data()
