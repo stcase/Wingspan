@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Message:
-    player: str
+    player: Optional[str]
     hours_remaining: float
 
 
@@ -56,18 +56,23 @@ class Bot(commands.Bot):
             await self.decide_send_message(channel.send, game_info)
 
     async def decide_send_message(self, send_func, game_info: GameInfo, always_send: bool = False) -> None:
+        normal_play = not (game_info.is_completed or game_info.waiting_to_start)
         game_id = game_info.game_id
-        player = game_info.current_turn.username
-        hours_remaining = game_info.hours_remaining
+        player = game_info.current_turn.username if normal_play else None
+        hours_remaining = game_info.hours_remaining if normal_play else 0
         sent_message = self.sent_messages.get(game_info.game_id, None)
         notifications = ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]]) if player in self.subscriptions else ""
         if notifications:
-            notifications = f"({notifications})"
-
-        if hours_remaining <= 24 and (always_send or sent_message is None or 24 < sent_message.hours_remaining):
+            notifications = f" ({notifications})"
+        if not normal_play and (always_send or sent_message is None or sent_message.player != player):
+            if game_info.is_completed:
+                await send_func(f"Game {game_id} is Complete!")
+            else:
+                await send_func(f"Game {game_id} is waiting to start")
+        elif hours_remaining <= 24 and (always_send or sent_message is None or 24 < sent_message.hours_remaining or sent_message.player != player):
             await send_func(f":rotating_light: {player} {notifications} only has {hours_remaining:.2f} hours remaining in match {game_id} :rotating_light:")
         elif sent_message is None or always_send or sent_message.player != player:
-            await send_func(f"It's {player}'s {notifications} turn with {hours_remaining:.2f} hours remaining in match {game_id}")
+            await send_func(f"It's {player}'s{notifications} turn with {hours_remaining:.2f} hours remaining in match {game_id}")
         else:
             return
         self.sent_messages[game_id] = Message(player=player, hours_remaining=hours_remaining)
@@ -101,6 +106,16 @@ class Bot(commands.Bot):
                     self.save_data()
 
         @self.command()
+        async def remove(ctx, game_id: str):
+            """ Remove the game_id from being monitored """
+            if game_id not in self.sent_messages:
+                await ctx.reply(f"Not monitoring game_id: {game_id}")
+            else:
+                del self.sent_messages[game_id]
+                await ctx.reply(f"No longer monitoring game_id: {game_id}")
+                self.save_data()
+
+        @self.command()
         async def subscribe(ctx, username: str):
             """ Provide a wingspan username you would like to receive notifications for """
             subscriptions = self.subscriptions.get(username, set())
@@ -113,7 +128,7 @@ class Bot(commands.Bot):
         async def unsubscribe(ctx, username: str):
             """ Unsubscribe from notifications for the wingspan username """
             subscriptions = self.subscriptions.get(username, set())
-            if not ctx.author.id in subscriptions:
+            if ctx.author.id not in subscriptions:
                 await ctx.reply(f"{ctx.author.name} is not subscribed to {username}")
             else:
                 subscriptions.remove(ctx.author.id)

@@ -41,6 +41,14 @@ class GameInfo(JSONData):
     def is_valid(self):
         return "Error" not in self.data
 
+    @property
+    def is_completed(self) -> bool:
+        return self.data["Match"]["State"] == "COMPLETED"
+
+    @property
+    def waiting_to_start(self) -> bool:
+        return self.data["Match"]["State"] == "WAITING"
+
 
 class Game(JSONData):
     @property

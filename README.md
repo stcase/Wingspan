@@ -2,9 +2,10 @@
 
 ## Setup
 1. Get a local enlistment of this project
-2. Setup SteamworksPy (see below)
-2. Get the bot's token [from here](https://discord.com/developers/applications/), if you're the owner
-3. Copy `configs_exmaple.py` to `configs.py` and update the contents
+2. Install [Poetry](https://python-poetry.org/)
+3. Setup SteamworksPy (see below)
+4. Get the bot's token [from here](https://discord.com/developers/applications/), if you're the owner
+5. Copy `configs_exmaple.py` to `configs.py` and update the contents
 
 ### Setting up SteamworksPy on Windows-64
 1. Download the [Steamworks SDK](https://partner.steamgames.com/)
@@ -14,6 +15,10 @@
 3. Copy the latest `SteamworksPy.dll` to the enlistment root from the
    [pre-built versions](https://github.com/philippj/SteamworksPy/releases)
 4. Copy the `steamworks` folder for the corresponding version to the enlistment root from the SteamworksPy source code
+
+## Testing
+
+Run `poetry run pytest`
 
 ## Running
 
@@ -32,3 +37,4 @@ Discord
 - https://nextcord.readthedocs.io/en/latest/index.html
 - https://discord.com/developers/docs/intro
 - https://discordpy.readthedocs.io/en/stable/discord.html
+
