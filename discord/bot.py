@@ -36,14 +36,27 @@ class Bot(commands.Bot):
 
     def save_data(self):
         with open(STATE_FILE, "w") as f:
-            json.dump({"messages": {game_id: (asdict(message) if message is not None else None) for game_id, message in self.sent_messages.items()}, "subscriptions": {player: list(ids) for player, ids in self.subscriptions.items()}}, f, indent=2)
+            json.dump(
+                {
+                    "messages": {
+                        game_id: (asdict(message) if message is not None else None)
+                        for game_id, message in self.sent_messages.items()
+                    },
+                    "subscriptions": {player: list(ids) for player, ids in self.subscriptions.items()},
+                },
+                f,
+                indent=2,
+            )
 
     def load_data(self):
         try:
             with open(STATE_FILE, "r") as f:
                 data = json.load(f)
             self.subscriptions = {player: set(ids) for player, ids in data["subscriptions"].items()}
-            self.sent_messages = {game_id: (Message(**message) if message is not None else None) for game_id, message in data["messages"].items()}
+            self.sent_messages = {
+                game_id: (Message(**message) if message is not None else None)
+                for game_id, message in data["messages"].items()
+            }
         except JSONDecodeError as e:
             logger.info(f"Failed to load state file: {e}")
 
@@ -61,7 +74,11 @@ class Bot(commands.Bot):
         player = game_info.current_turn.username if normal_play else None
         hours_remaining = game_info.hours_remaining if normal_play else 0
         sent_message = self.sent_messages.get(game_info.game_id, None)
-        notifications = ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]]) if player in self.subscriptions else ""
+        notifications = (
+            ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
+            if player in self.subscriptions
+            else ""
+        )
         if notifications:
             notifications = f" ({notifications})"
         if not normal_play and (always_send or sent_message is None or sent_message.player != player):
@@ -69,10 +86,16 @@ class Bot(commands.Bot):
                 await send_func(f"Game {game_id} is Complete!")
             else:
                 await send_func(f"Game {game_id} is waiting to start")
-        elif hours_remaining <= 24 and (always_send or sent_message is None or 24 < sent_message.hours_remaining or sent_message.player != player):
-            await send_func(f":rotating_light: {player} {notifications} only has {hours_remaining:.2f} hours remaining in match {game_id} :rotating_light:")
+        elif hours_remaining <= 24 and (
+            always_send or sent_message is None or 24 < sent_message.hours_remaining or sent_message.player != player
+        ):
+            await send_func(
+                f":rotating_light: {player} {notifications} only has {hours_remaining:.2f} hours remaining in match {game_id} :rotating_light:"
+            )
         elif sent_message is None or always_send or sent_message.player != player:
-            await send_func(f"It's {player}'s{notifications} turn with {hours_remaining:.2f} hours remaining in match {game_id}")
+            await send_func(
+                f"It's {player}'s{notifications} turn with {hours_remaining:.2f} hours remaining in match {game_id}"
+            )
         else:
             return
         self.sent_messages[game_id] = Message(player=player, hours_remaining=hours_remaining)

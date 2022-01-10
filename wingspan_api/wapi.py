@@ -31,7 +31,7 @@ class GameInfo(JSONData):
 
     @property
     def hours_remaining(self) -> float:
-        return self.data["Match"]["TurnTimeout"]["SecondsRemaining"]/60/60
+        return self.data["Match"]["TurnTimeout"]["SecondsRemaining"] / 60 / 60
 
     @property
     def game_id(self):
@@ -86,12 +86,14 @@ class Wapi:
     def get_login(self, session_ticket):
         r = requests.post(
             url=f"{HOST}/1.0/player/login/steam",
-            data={"SessionTicket": session_ticket,
-                  "CreatePlayer": True,
-                  "DeviceType": "DESKTOP",
-                  "Platform": "WINDOWS",
-                  "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")},
-            headers={"Game-Token": "xCv44nsmb6bP9q8fAIJn1uy70EzyfJJH"}
+            data={
+                "SessionTicket": session_ticket,
+                "CreatePlayer": True,
+                "DeviceType": "DESKTOP",
+                "Platform": "WINDOWS",
+                "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            },
+            headers={"Game-Token": "xCv44nsmb6bP9q8fAIJn1uy70EzyfJJH"},
         )
         return r.json()
 
