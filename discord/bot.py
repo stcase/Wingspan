@@ -57,7 +57,7 @@ class Bot(commands.Bot):
                 game_id: (Message(**message) if message is not None else None)
                 for game_id, message in data["messages"].items()
             }
-        except JSONDecodeError as e:
+        except (JSONDecodeError, FileNotFoundError) as e:
             logger.info(f"Failed to load state file: {e}")
 
     @tasks.loop(minutes=5)
