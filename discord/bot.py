@@ -66,14 +66,13 @@ class Bot(commands.Bot):
 
         for game_id in self.sent_messages:
             game_info = self.wapi.get_game_info(game_id)
-            await self.decide_send_message(channel.send, game_info)
+            await self.decide_send_message(channel.send, game_id, game_info)
 
-    async def decide_send_message(self, send_func, game_info: GameInfo, always_send: bool = False) -> None:
-        normal_play = not (game_info.is_completed or game_info.waiting_to_start)
-        game_id = game_info.game_id
+    async def decide_send_message(self, send_func, game_id: str, game_info: GameInfo, always_send: bool = False) -> None:
+        normal_play = not (not game_info.valid or game_info.is_completed or game_info.waiting_to_start)
         player = game_info.current_turn.username if normal_play else None
         hours_remaining = game_info.hours_remaining if normal_play else 0
-        sent_message = self.sent_messages.get(game_info.game_id, None)
+        sent_message = self.sent_messages.get(game_id, None)
         notifications = (
             ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
             if player in self.subscriptions
@@ -82,10 +81,14 @@ class Bot(commands.Bot):
         if notifications:
             notifications = f" ({notifications})"
         if not normal_play and (always_send or sent_message is None or sent_message.player != player):
-            if game_info.is_completed:
+            if not game_info.valid:
+                await send_func(f"Error getting data {game_id}: {game_info.data}")
+            elif game_info.is_completed:
                 await send_func(f"Game {game_id} is Complete!")
-            else:
+            elif game_info.waiting_to_start:
                 await send_func(f"Game {game_id} is waiting to start")
+            else:
+                await send_func(f"Unknown error {game_id}: {game_info.data}")
         elif hours_remaining <= 24 and (
             always_send or sent_message is None or 24 < sent_message.hours_remaining or sent_message.player != player
         ):
@@ -111,7 +114,7 @@ class Bot(commands.Bot):
             """ Who's turn is it? """
             for game_id in self.sent_messages:
                 game_info = self.wapi.get_game_info(game_id)
-                await self.decide_send_message(ctx.reply, game_info, always_send=True)
+                await self.decide_send_message(ctx.reply, game_id, game_info, always_send=True)
 
         @self.command()
         async def add(ctx, game_id: str):

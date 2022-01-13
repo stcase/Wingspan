@@ -9,8 +9,9 @@ HOST = "https://connect.chilliconnect.com"
 
 
 class JSONData:
-    def __init__(self, data: Any):
+    def __init__(self, data: Any, valid: bool = True):
         self.data = data
+        self.valid = valid
 
 
 class Player(JSONData):
@@ -103,7 +104,7 @@ class Wapi:
             data={},
             headers={"Connect-Access-Token": self.access_token},
         )
-        return Games(r.json())
+        return Games(r.json(), r.status_code==200)
 
     def get_game_info(self, match_id: str) -> GameInfo:
         r = requests.post(
@@ -111,4 +112,4 @@ class Wapi:
             data={"MatchID": match_id},
             headers={"Connect-Access-Token": self.access_token},
         )
-        return GameInfo(r.json())
+        return GameInfo(r.json(), r.status_code==200)
