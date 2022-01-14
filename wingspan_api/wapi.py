@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Any, Tuple, Sequence
 
@@ -6,6 +7,8 @@ import requests
 from steamworks import STEAMWORKS
 
 HOST = "https://connect.chilliconnect.com"
+
+logger = logging.getLogger(__name__)
 
 
 class JSONData:
@@ -37,10 +40,6 @@ class GameInfo(JSONData):
     @property
     def game_id(self):
         return self.data["Match"]["MatchID"]
-
-    @property
-    def is_valid(self):
-        return "Error" not in self.data
 
     @property
     def is_completed(self) -> bool:
@@ -98,18 +97,27 @@ class Wapi:
         )
         return r.json()
 
-    def get_games(self) -> Games:
+    def _get_info(self, path: str, data):
         r = requests.post(
-            url=f"{HOST}/1.0/multiplayer/async/match/player/get",
-            data={},
+            url=f"{HOST}/{path}",
+            data=data,
             headers={"Connect-Access-Token": self.access_token},
         )
+        if r.status_code != 200 and r.json["Code"] == 1003:
+            # expired connect access token
+            logging.info("Access token expired, generating a new one")
+            self.generate_access_token()
+            r = requests.post(
+                url=f"{HOST}/{path}",
+                data=data,
+                headers={"Connect-Access-Token": self.access_token},
+            )
+        return r
+
+    def get_games(self) -> Games:
+        r = self._get_info("1.0/multiplayer/async/match/player/get", {})
         return Games(r.json(), r.status_code==200)
 
     def get_game_info(self, match_id: str) -> GameInfo:
-        r = requests.post(
-            url=f"{HOST}/1.0/multiplayer/async/match/get",
-            data={"MatchID": match_id},
-            headers={"Connect-Access-Token": self.access_token},
-        )
+        r = self._get_info("1.0/multiplayer/async/match/get", {"MatchID": match_id})
         return GameInfo(r.json(), r.status_code==200)
