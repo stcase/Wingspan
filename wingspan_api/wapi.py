@@ -103,7 +103,7 @@ class Wapi:
             data=data,
             headers={"Connect-Access-Token": self.access_token},
         )
-        if r.status_code != 200 and r.json["Code"] == 1003:
+        if r.status_code != 200 and r.json()["Code"] == 1003:
             # expired connect access token
             logging.info("Access token expired, generating a new one")
             self.generate_access_token()
