@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, Tuple, Sequence
+from typing import Any, Tuple, Sequence, Iterator
 
 import requests
 
@@ -56,14 +56,14 @@ class Game(JSONData):
         return self.data["MatchID"]
 
     @property
-    def players(self) -> Sequence[Player]:
+    def players(self) -> Iterator[Player]:
         for player in self.data["Players"]:
             yield Player(player)
 
 
 class Games(JSONData):
     @property
-    def games(self) -> Sequence[Game]:
+    def games(self) -> Iterator[Game]:
         for game in self.data["Matches"]:
             yield Game(game)
 

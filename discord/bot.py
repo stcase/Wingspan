@@ -124,7 +124,7 @@ class Bot(commands.Bot):
             else:
                 game_info = self.wapi.get_game_info(game_id)
                 print(game_info.data)
-                if not game_info.is_valid:
+                if not game_info.valid:
                     await ctx.reply(f"Invalid game_id: {game_id}")
                 else:
                     self.sent_messages[game_id] = None
