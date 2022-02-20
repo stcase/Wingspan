@@ -69,15 +69,16 @@ class Bot(commands.Bot):
             await self.decide_send_message(channel.send, game_id, game_info)
 
     async def decide_send_message(self, send_func, game_id: str, game_info: GameInfo, always_send: bool = False) -> None:
-        normal_play = not (not game_info.valid or game_info.is_completed or game_info.waiting_to_start)
+        hours_remaining = game_info.hours_remaining
+        normal_play = not (not game_info.valid or game_info.is_completed or game_info.waiting_to_start or hours_remaining is None)
         player = game_info.current_turn.username if normal_play else None
-        hours_remaining = game_info.hours_remaining if normal_play else 0
         sent_message = self.sent_messages.get(game_id, None)
         notifications = (
             ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
             if player in self.subscriptions
             else ""
         )
+
         if notifications:
             notifications = f" ({notifications})"
         if not normal_play and (always_send or sent_message is None or sent_message.player != player):

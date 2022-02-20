@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any, Tuple, Sequence, Iterator
@@ -34,20 +36,28 @@ class GameInfo(JSONData):
         raise RuntimeError(f"Player match for {player_id} not found in {players}")
 
     @property
-    def hours_remaining(self) -> float:
-        return self.data["Match"]["TurnTimeout"]["SecondsRemaining"] / 60 / 60
+    def hours_remaining(self) -> None | float:
+        if self.state == "IN_PROGRESS":
+            return self.data["Match"]["TurnTimeout"]["SecondsRemaining"] / 60 / 60
+        if self.state == "READY":
+            return self.data["Match"]["WaitingTimeout"]["SecondsRemaining"] / 60 / 60
+        return None
 
     @property
-    def game_id(self):
+    def game_id(self) -> str:
         return self.data["Match"]["MatchID"]
 
     @property
+    def state(self) -> str:
+        return self.data["Match"]["State"]
+
+    @property
     def is_completed(self) -> bool:
-        return self.data["Match"]["State"] == "COMPLETED"
+        return self.state == "COMPLETED"
 
     @property
     def waiting_to_start(self) -> bool:
-        return self.data["Match"]["State"] == "WAITING"
+        return self.state == "WAITING"
 
 
 class Game(JSONData):
