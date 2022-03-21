@@ -1,3 +1,5 @@
+![Workflow Status](https://github.com/stcase/Wingspan/actions/workflows/run-tests.yml/badge.svg)
+
 # Wingspan Bot
 
 ## Setup
@@ -6,6 +8,7 @@
 3. Setup SteamworksPy (see below)
 4. Get the bot's token [from here](https://discord.com/developers/applications/), if you're the owner
 5. Copy `configs_exmaple.py` to `configs.py` and update the contents
+6. Install git hooks with `poetry run pre-commit install`
 
 ### Setting up SteamworksPy on Windows-64
 1. Download the [Steamworks SDK](https://partner.steamgames.com/)
@@ -37,4 +40,3 @@ Discord
 - https://nextcord.readthedocs.io/en/latest/index.html
 - https://discord.com/developers/docs/intro
 - https://discordpy.readthedocs.io/en/stable/discord.html
-

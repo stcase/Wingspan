@@ -1,8 +1,6 @@
 /configs.py
 /state_data.json
 
-poetry.lock
-
 __pycache__
 
 /.idea
