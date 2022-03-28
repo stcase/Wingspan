@@ -1,0 +1,3 @@
+from steamworks.enums import Arch as Arch
+
+def get_arch(): ...
