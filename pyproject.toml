@@ -5,7 +5,7 @@ description = ""
 authors = ["Steven Case <stcinc@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 requests = "^2.26.0"
 nextcord = "^2.0.0-alpha.5"
 

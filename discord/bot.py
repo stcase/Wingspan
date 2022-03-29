@@ -1,10 +1,13 @@
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, asdict
 from json import JSONDecodeError
-from typing import Dict, Optional
+from typing import Any
 
-from nextcord.ext import commands, tasks
+import nextcord
+from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
+from nextcord.ext.commands import Context
 
 from wingspan_api.wapi import GameInfo, Wapi
 
@@ -15,18 +18,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Message:
-    player: Optional[str]
-    hours_remaining: float
+    player: str | None
+    hours_remaining: float | None
 
 
-class Bot(commands.Bot):
-    def __init__(self, wapi: Wapi, channel_id: int, *args, **kwargs):
+class Bot(commands.Bot):  # type: ignore[misc]
+    def __init__(self, wapi: Wapi, channel_id: int, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
         self.wapi = wapi
         self.channel_id = channel_id
-        self.sent_messages: Dict[str, Optional[Message]] = {}
-        self.subscriptions: Dict[str, set[str]] = {}
+        self.sent_messages: dict[str, Message | None] = {}
+        self.subscriptions: dict[str, set[str]] = {}
         self.load_data()
 
         # start the task to run in the background
@@ -34,7 +37,7 @@ class Bot(commands.Bot):
 
         self.load_commands()
 
-    def save_data(self):
+    def save_data(self) -> None:
         with open(STATE_FILE, "w") as f:
             json.dump(
                 {
@@ -48,7 +51,7 @@ class Bot(commands.Bot):
                 indent=2,
             )
 
-    def load_data(self):
+    def load_data(self) -> None:
         try:
             with open(STATE_FILE, "r") as f:
                 data = json.load(f)
@@ -60,65 +63,69 @@ class Bot(commands.Bot):
         except (JSONDecodeError, FileNotFoundError) as e:
             logger.info(f"Failed to load state file: {e}")
 
-    @tasks.loop(minutes=5)
-    async def check_turns(self):
+    @tasks.loop(minutes=5)  # type: ignore[misc]
+    async def check_turns(self) -> None:
         channel = self.get_channel(self.channel_id)  # channel ID goes here
 
         for game_id in self.sent_messages:
             game_info = self.wapi.get_game_info(game_id)
-            await self.decide_send_message(channel.send, game_id, game_info)
+            if self.should_send_message(game_id, game_info):
+                await self.send_message(channel.send, game_id, game_info)
 
-    async def decide_send_message(self, send_func, game_id: str, game_info: GameInfo, always_send: bool = False) -> None:
-        hours_remaining = game_info.hours_remaining
-        normal_play = not (not game_info.valid or game_info.is_completed or game_info.waiting_to_start or hours_remaining is None)
-        player = game_info.current_turn.username if normal_play else None
+    def should_send_message(self, game_id: str, game_info: GameInfo) -> bool:
         sent_message = self.sent_messages.get(game_id, None)
-        notifications = (
+        player = game_info.current_turn.username
+        hours_remaining = game_info.hours_remaining
+        return (sent_message is None  # no messages sent
+                or sent_message.player != player  # player's turn changed
+                or (hours_remaining is not None and sent_message.hours_remaining is not None
+                    and hours_remaining < 24 < sent_message.hours_remaining))  # out of time warning
+
+    async def send_message(self,
+                           send_func: Callable[[str], Awaitable[nextcord.message.Message]],
+                           game_id: str,
+                           game_info: GameInfo) -> None:
+        hours_remaining = game_info.hours_remaining
+        player = game_info.current_turn.username
+        tagged_users = (
             ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
             if player in self.subscriptions
             else ""
         )
 
-        if notifications:
-            notifications = f" ({notifications})"
-        if not normal_play and (always_send or sent_message is None or sent_message.player != player):
-            if not game_info.valid:
-                await send_func(f"Error getting data {game_id}: {game_info.data}")
-            elif game_info.is_completed:
-                await send_func(f"Game {game_id} is Complete!")
-            elif game_info.waiting_to_start:
-                await send_func(f"Game {game_id} is waiting to start")
-            else:
-                await send_func(f"Unknown error {game_id}: {game_info.data}")
-        elif hours_remaining <= 24 and (
-            always_send or sent_message is None or 24 < sent_message.hours_remaining or sent_message.player != player
-        ):
+        if game_info.is_completed:
+            await send_func(f"Game {game_id} is Complete!")
+        elif game_info.waiting_to_start:
+            await send_func(f"Game {game_id} is waiting to start")
+        elif hours_remaining is not None and hours_remaining <= 24:
             await send_func(
-                f":rotating_light: {player} {notifications} only has {hours_remaining:.2f} hours remaining in match {game_id} :rotating_light:"
+                f":rotating_light: {player}{tagged_users} only has {hours_remaining:.2f} hours remaining"
+                f"in match {game_id} :rotating_light:"
             )
-        elif sent_message is None or always_send or sent_message.player != player:
+        elif hours_remaining is not None:
             await send_func(
-                f"It's {player}'s{notifications} turn with {hours_remaining:.2f} hours remaining in match {game_id}"
+                f"It's {player}'s{tagged_users} turn with {hours_remaining:.2f} hours remaining in match {game_id}"
             )
         else:
-            return
+            await send_func(f"Unknown error {game_id}: {game_info.data}")
+
         self.sent_messages[game_id] = Message(player=player, hours_remaining=hours_remaining)
         self.save_data()
 
-    @check_turns.before_loop
-    async def before_my_task(self):
+    @check_turns.before_loop  # type: ignore[misc]
+    async def before_my_task(self) -> None:
         await self.wait_until_ready()  # wait until the bot logs in
 
-    def load_commands(self):
-        @self.command()
-        async def turn(ctx):
+    def load_commands(self) -> None:
+        @self.command()  # type: ignore[misc]
+        async def turn(ctx: Context) -> None:
             """ Who's turn is it? """
             for game_id in self.sent_messages:
                 game_info = self.wapi.get_game_info(game_id)
-                await self.decide_send_message(ctx.reply, game_id, game_info, always_send=True)
+                await self.send_message(ctx.reply, game_id, game_info)
 
-        @self.command()
-        async def add(ctx, game_id: str):
+        @self.command()  # type: ignore[misc]
+        async def add(ctx: Context, game_id: str) -> None:
             """ Add the game_id to be monitored """
             if game_id in self.sent_messages:
                 await ctx.reply(f"Already monitoring game_id: {game_id}")
@@ -132,8 +139,8 @@ class Bot(commands.Bot):
                     await ctx.reply(f"Now monitoring game_id: {game_id}")
                     self.save_data()
 
-        @self.command()
-        async def remove(ctx, game_id: str):
+        @self.command()  # type: ignore[misc]
+        async def remove(ctx: Context, game_id: str) -> None:
             """ Remove the game_id from being monitored """
             if game_id not in self.sent_messages:
                 await ctx.reply(f"Not monitoring game_id: {game_id}")
@@ -142,8 +149,8 @@ class Bot(commands.Bot):
                 await ctx.reply(f"No longer monitoring game_id: {game_id}")
                 self.save_data()
 
-        @self.command()
-        async def subscribe(ctx, username: str):
+        @self.command()  # type: ignore[misc]
+        async def subscribe(ctx: Context, username: str) -> None:
             """ Provide a wingspan username you would like to receive notifications for """
             subscriptions = self.subscriptions.get(username, set())
             subscriptions.add(ctx.author.id)
@@ -151,8 +158,8 @@ class Bot(commands.Bot):
             await ctx.reply(f"Now notifying {ctx.author.name} for {username}")
             self.save_data()
 
-        @self.command()
-        async def unsubscribe(ctx, username: str):
+        @self.command()  # type: ignore[misc]
+        async def unsubscribe(ctx: Context, username: str) -> None:
             """ Unsubscribe from notifications for the wingspan username """
             subscriptions = self.subscriptions.get(username, set())
             if ctx.author.id not in subscriptions:

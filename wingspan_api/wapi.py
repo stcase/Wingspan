@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Any, Tuple, Sequence, Iterator
+from typing import Any, TYPE_CHECKING
 
 import requests
+from requests import Response
 
-from steamworks import STEAMWORKS
+if TYPE_CHECKING:
+    from steamworks_types import STEAMWORKS
+else:
+    from steamworks import STEAMWORKS
 
 HOST = "https://connect.chilliconnect.com"
 
@@ -21,8 +26,9 @@ class JSONData:
 
 class Player(JSONData):
     @property
-    def username(self) -> str:
-        return self.data["UserName"]
+    def username(self) -> str | None:
+        username = self.data["UserName"]
+        return str(username) if username is not None else username
 
 
 class GameInfo(JSONData):
@@ -38,18 +44,18 @@ class GameInfo(JSONData):
     @property
     def hours_remaining(self) -> None | float:
         if self.state == "IN_PROGRESS":
-            return self.data["Match"]["TurnTimeout"]["SecondsRemaining"] / 60 / 60
+            return float(self.data["Match"]["TurnTimeout"]["SecondsRemaining"]) / 60 / 60
         if self.state == "READY":
-            return self.data["Match"]["WaitingTimeout"]["SecondsRemaining"] / 60 / 60
+            return float(self.data["Match"]["WaitingTimeout"]["SecondsRemaining"]) / 60 / 60
         return None
 
     @property
     def game_id(self) -> str:
-        return self.data["Match"]["MatchID"]
+        return str(self.data["Match"]["MatchID"])
 
     @property
     def state(self) -> str:
-        return self.data["Match"]["State"]
+        return str(self.data["Match"]["State"])
 
     @property
     def is_completed(self) -> bool:
@@ -63,7 +69,7 @@ class GameInfo(JSONData):
 class Game(JSONData):
     @property
     def match_id(self) -> str:
-        return self.data["MatchID"]
+        return str(self.data["MatchID"])
 
     @property
     def players(self) -> Iterator[Player]:
@@ -79,13 +85,13 @@ class Games(JSONData):
 
 
 class Wapi:
-    def __init__(self, access_token: str = None):
+    def __init__(self, access_token: str | None = None):
         if access_token is not None:
             self.access_token = access_token
         else:
             self.generate_access_token()
 
-    def generate_access_token(self):
+    def generate_access_token(self) -> None:
         steamworks = STEAMWORKS()
         steamworks.initialize()
 
@@ -93,7 +99,7 @@ class Wapi:
         resp = self.get_login(session_ticket)
         self.access_token = resp["ConnectAccessToken"]
 
-    def get_login(self, session_ticket):
+    def get_login(self, session_ticket: str) -> Any:
         r = requests.post(
             url=f"{HOST}/1.0/player/login/steam",
             data={
@@ -107,7 +113,7 @@ class Wapi:
         )
         return r.json()
 
-    def _get_info(self, path: str, data):
+    def _get_info(self, path: str, data: dict[str, str]) -> Response:
         r = requests.post(
             url=f"{HOST}/{path}",
             data=data,
@@ -126,8 +132,8 @@ class Wapi:
 
     def get_games(self) -> Games:
         r = self._get_info("1.0/multiplayer/async/match/player/get", {})
-        return Games(r.json(), r.status_code==200)
+        return Games(r.json(), r.status_code == 200)
 
     def get_game_info(self, match_id: str) -> GameInfo:
         r = self._get_info("1.0/multiplayer/async/match/get", {"MatchID": match_id})
-        return GameInfo(r.json(), r.status_code==200)
+        return GameInfo(r.json(), r.status_code == 200)
