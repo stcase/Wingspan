@@ -1,7 +1,11 @@
 import argparse
 import logging
+from typing import TYPE_CHECKING
 
-from configs import BOT_SECRET_TOKEN, CHANNEL
+if TYPE_CHECKING:
+    from configs_example import BOT_SECRET_TOKEN, CHANNEL
+else:
+    from configs import BOT_SECRET_TOKEN, CHANNEL
 from wingspan_api.wapi import Wapi
 from discord.bot import Bot
 
