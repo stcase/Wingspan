@@ -32,17 +32,17 @@ def main() -> None:
 
 def print_games() -> None:
     wapi = Wapi()
-    games = wapi.get_games()
-    for game in games.games:
-        print(game.match_id)
-        for player in game.players:
-            print(f" {player.username}")
+    matches = wapi.get_games()
+    for match in matches.Matches:
+        print(match.MatchID)
+        for player in match.Players:
+            print(f" {player.UserName}")
 
 
 def print_game_info(match_id: str) -> None:
     wapi = Wapi()
     game_info = wapi.get_game_info(match_id)
-    print(game_info.current_turn.username)
+    print(game_info.current_player.UserName)
     print(game_info.hours_remaining)
 
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from typing import Any, TYPE_CHECKING
 
 import requests
+from dataclasses_json import dataclass_json
 from requests import Response
 
 if TYPE_CHECKING:
@@ -18,70 +20,69 @@ HOST = "https://connect.chilliconnect.com"
 logger = logging.getLogger(__name__)
 
 
-class JSONData:
-    def __init__(self, data: Any, valid: bool = True):
-        self.data = data
-        self.valid = valid
+class State(Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    READY = "READY"
+    WAITING = "WAITING"  # waiting for the match to start
+    COMPLETED = "COMPLETED"  # the match is over
 
 
-class Player(JSONData):
+@dataclass_json
+@dataclass
+class StateData:
+    CurrentPlayerID: str
+
+
+@dataclass_json()
+@dataclass
+class Timeout:
+    SecondsRemaining: int
+    Expires: str
+
+
+@dataclass_json()
+@dataclass
+class Player:
+    ChilliConnectID: str
+    UserName: str
+
+
+@dataclass_json()
+@dataclass
+class Match:
+    MatchID: str
+    State: State
+    WaitingTimeout: Timeout | None
+    TurnTimeout: Timeout | None
+    Players: list[Player]
+    StateData: StateData | None = None  # not in the data from Matches
+
     @property
-    def username(self) -> str | None:
-        username = self.data["UserName"]
-        return str(username) if username is not None else username
-
-
-class GameInfo(JSONData):
-    @property
-    def current_turn(self) -> Player:
-        player_id: str = self.data["Match"]["StateData"]["CurrentPlayerID"]
-        players = self.data["Match"]["Players"]
-        for player in players:
-            if player["ChilliConnectID"] == player_id:
-                return Player(player)
-        raise RuntimeError(f"Player match for {player_id} not found in {players}")
-
-    @property
-    def hours_remaining(self) -> None | float:
-        if self.state == "IN_PROGRESS":
-            return float(self.data["Match"]["TurnTimeout"]["SecondsRemaining"]) / 60 / 60
-        if self.state == "READY":
-            return float(self.data["Match"]["WaitingTimeout"]["SecondsRemaining"]) / 60 / 60
+    def current_player(self) -> Player | None:
+        if self.StateData is None:
+            raise ValueError("No StateData for this match")
+        for player in self.Players:
+            if player.ChilliConnectID == self.StateData.CurrentPlayerID:
+                return player
         return None
 
     @property
-    def game_id(self) -> str:
-        return str(self.data["Match"]["MatchID"])
-
-    @property
-    def state(self) -> str:
-        return str(self.data["Match"]["State"])
-
-    @property
-    def is_completed(self) -> bool:
-        return self.state == "COMPLETED"
-
-    @property
-    def waiting_to_start(self) -> bool:
-        return self.state == "WAITING"
+    def hours_remaining(self) -> float | None:
+        if self.State == State.IN_PROGRESS:
+            if self.TurnTimeout is None:
+                raise ValueError("Unexpected game state")
+            return self.TurnTimeout.SecondsRemaining / 60 / 60
+        if self.State == State.READY:
+            if self.WaitingTimeout is None:
+                raise ValueError("Unexpected game state")
+            return self.WaitingTimeout.SecondsRemaining / 60 / 60
+        return None
 
 
-class Game(JSONData):
-    @property
-    def match_id(self) -> str:
-        return str(self.data["MatchID"])
-
-    @property
-    def players(self) -> Iterator[Player]:
-        for player in self.data["Players"]:
-            yield Player(player)
-
-
-class Games(JSONData):
-    @property
-    def games(self) -> Iterator[Game]:
-        for game in self.data["Matches"]:
-            yield Game(game)
+@dataclass_json()
+@dataclass
+class Matches:
+    Matches: list[Match]
 
 
 class Wapi:
@@ -128,12 +129,13 @@ class Wapi:
                 data=data,
                 headers={"Connect-Access-Token": self.access_token},
             )
+        r.raise_for_status()
         return r
 
-    def get_games(self) -> Games:
+    def get_games(self) -> Matches:
         r = self._get_info("1.0/multiplayer/async/match/player/get", {})
-        return Games(r.json(), r.status_code == 200)
+        return Matches.from_dict(r.json())  # type: ignore
 
-    def get_game_info(self, match_id: str) -> GameInfo:
+    def get_game_info(self, match_id: str) -> Match:
         r = self._get_info("1.0/multiplayer/async/match/get", {"MatchID": match_id})
-        return GameInfo(r.json(), r.status_code == 200)
+        return Match.from_dict(r.json()["Match"])  # type: ignore

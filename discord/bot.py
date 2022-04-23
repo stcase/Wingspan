@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, asdict
 from json import JSONDecodeError
@@ -9,7 +10,7 @@ import nextcord
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
 
-from wingspan_api.wapi import GameInfo, Wapi
+from wingspan_api.wapi import Wapi, Match
 
 STATE_FILE = "state_data.json"
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 class Message:
     player: str | None
     hours_remaining: float | None
+    error_sent: bool = False
 
 
 class Bot(commands.Bot):  # type: ignore[misc]
@@ -68,13 +70,16 @@ class Bot(commands.Bot):  # type: ignore[misc]
         channel = self.get_channel(self.channel_id)  # channel ID goes here
 
         for game_id in self.sent_messages:
-            game_info = self.wapi.get_game_info(game_id)
-            if self.should_send_message(game_id, game_info):
-                await self.send_message(channel.send, game_id, game_info)
+            try:
+                game_info = self.wapi.get_game_info(game_id)
+                if self.should_send_message(game_id, game_info):
+                    await self.send_message(channel.send, game_id, game_info)
+            except BaseException as e:
+                await self._handle_error(e, channel.send, game_id)
 
-    def should_send_message(self, game_id: str, game_info: GameInfo) -> bool:
+    def should_send_message(self, game_id: str, game_info: Match) -> bool:
         sent_message = self.sent_messages.get(game_id, None)
-        player = game_info.current_turn.username
+        player = game_info.current_player.UserName
         hours_remaining = game_info.hours_remaining
         return (sent_message is None  # no messages sent
                 or sent_message.player != player  # player's turn changed
@@ -84,9 +89,9 @@ class Bot(commands.Bot):  # type: ignore[misc]
     async def send_message(self,
                            send_func: Callable[[str], Awaitable[nextcord.message.Message]],
                            game_id: str,
-                           game_info: GameInfo) -> None:
+                           game_info: Match) -> None:
         hours_remaining = game_info.hours_remaining
-        player = game_info.current_turn.username
+        player = game_info.current_player.UserName
         tagged_users = (
             ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
             if player in self.subscriptions
@@ -116,13 +121,27 @@ class Bot(commands.Bot):  # type: ignore[misc]
     async def before_my_task(self) -> None:
         await self.wait_until_ready()  # wait until the bot logs in
 
+    async def _handle_error(
+            self,
+            exc: BaseException,
+            send_func: Callable[[str], Awaitable[nextcord.message.Message]],
+            game_id: str) -> None:
+        logger.warning(f"Exception for game {game_id}")
+        logger.warning("".join(traceback.format_exception(exc)))
+        if self.sent_messages[game_id] is None or not self.sent_messages[game_id].error_sent:
+            await send_func(f"Error for game {game_id} - check the logs")
+            self.sent_messages[game_id].error_sent = Message(None, None, True)
+
     def load_commands(self) -> None:
         @self.command()  # type: ignore[misc]
         async def turn(ctx: Context) -> None:
             """ Who's turn is it? """
             for game_id in self.sent_messages:
-                game_info = self.wapi.get_game_info(game_id)
-                await self.send_message(ctx.reply, game_id, game_info)
+                try:
+                    game_info = self.wapi.get_game_info(game_id)
+                    await self.send_message(ctx.reply, game_id, game_info)
+                except BaseException as e:
+                    await self._handle_error(e, ctx.reply, game_id)
 
         @self.command()  # type: ignore[misc]
         async def add(ctx: Context, game_id: str) -> None:
