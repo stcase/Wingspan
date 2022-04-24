@@ -5,7 +5,7 @@ __pycache__
 
 /.idea
 
-/steamworks/
+/steamworks/**/*.py
 steam_api64.dll
 steam_api64.lib
 SteamworksPy64.dll

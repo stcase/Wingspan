@@ -4,20 +4,21 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 import requests
 from dataclasses_json import dataclass_json
 from requests import Response
 
-if TYPE_CHECKING:
-    from steamworks_types import STEAMWORKS
-else:
+logger = logging.getLogger(__name__)
+
+try:
+    # this is only present after installation and not needed for tests
     from steamworks import STEAMWORKS
+except ImportError:
+    logger.warn("Failed to import steamworks")
 
 HOST = "https://connect.chilliconnect.com"
-
-logger = logging.getLogger(__name__)
 
 
 class State(Enum):
