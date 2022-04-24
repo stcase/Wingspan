@@ -2,16 +2,20 @@ import logging
 import sys
 import traceback
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import nextcord
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
 
-from configs import ADMIN_CHANNEL
 from discord.data.data_controller import DataController
 from discord.data.models import MessageType
 from wingspan_api.wapi import Match
+if TYPE_CHECKING:
+    # TODO: create a class that handles these configs
+    from configs_example import ADMIN_CHANNEL
+else:
+    from configs import ADMIN_CHANNEL
 
 logger = logging.getLogger(__name__)
 
