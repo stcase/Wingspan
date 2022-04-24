@@ -67,16 +67,24 @@ class Match:
         return None
 
     @property
+    def current_player_name(self) -> str | None:
+        current_player = self.current_player
+        return None if current_player is None else current_player.UserName
+
+    @property
     def hours_remaining(self) -> float | None:
         if self.State == State.IN_PROGRESS:
             if self.TurnTimeout is None:
                 raise ValueError("Unexpected game state")
             return self.TurnTimeout.SecondsRemaining / 60 / 60
-        if self.State == State.READY:
+        if self.State == State.WAITING:
             if self.WaitingTimeout is None:
                 raise ValueError("Unexpected game state")
             return self.WaitingTimeout.SecondsRemaining / 60 / 60
         return None
+
+    def __str__(self) -> str:
+        return self.MatchID
 
 
 @dataclass_json()

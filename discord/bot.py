@@ -1,189 +1,160 @@
-import json
 import logging
+import sys
 import traceback
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, asdict
-from json import JSONDecodeError
 from typing import Any
 
 import nextcord
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
 
-from wingspan_api.wapi import Wapi, Match
-
-STATE_FILE = "state_data.json"
+from configs import ADMIN_CHANNEL
+from discord.data.data_controller import DataController
+from discord.data.models import MessageType
+from wingspan_api.wapi import Match
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Message:
-    player: str | None
-    hours_remaining: float | None
-    error_sent: bool = False
-
-
 class Bot(commands.Bot):  # type: ignore[misc]
-    def __init__(self, wapi: Wapi, channel_id: int, *args: Any, **kwargs: Any):
+    def __init__(self, data_controller: DataController, *args: Any, **kwargs: Any):
+        self.dc = data_controller
         super().__init__(*args, **kwargs)
 
-        self.wapi = wapi
-        self.channel_id = channel_id
-        self.sent_messages: dict[str, Message | None] = {}
-        self.subscriptions: dict[str, set[str]] = {}
-        self.load_data()
-
-        # start the task to run in the background
-        self.check_turns.start()
-
-        self.load_commands()
-
-    def save_data(self) -> None:
-        with open(STATE_FILE, "w") as f:
-            json.dump(
-                {
-                    "messages": {
-                        game_id: (asdict(message) if message is not None else None)
-                        for game_id, message in self.sent_messages.items()
-                    },
-                    "subscriptions": {player: list(ids) for player, ids in self.subscriptions.items()},
-                },
-                f,
-                indent=2,
-            )
-
-    def load_data(self) -> None:
-        try:
-            with open(STATE_FILE, "r") as f:
-                data = json.load(f)
-            self.subscriptions = {player: set(ids) for player, ids in data["subscriptions"].items()}
-            self.sent_messages = {
-                game_id: (Message(**message) if message is not None else None)
-                for game_id, message in data["messages"].items()
-            }
-        except (JSONDecodeError, FileNotFoundError) as e:
-            logger.info(f"Failed to load state file: {e}")
+        self.check_turns.start()  # start the task to run in the background
+        self.add_cog(BotCommands(self, data_controller))
+        self.in_error_state = False
 
     @tasks.loop(minutes=5)  # type: ignore[misc]
     async def check_turns(self) -> None:
-        channel = self.get_channel(self.channel_id)  # channel ID goes here
-
-        for game_id in self.sent_messages:
-            try:
-                game_info = self.wapi.get_game_info(game_id)
-                if self.should_send_message(game_id, game_info):
-                    await self.send_message(channel.send, game_id, game_info)
-            except BaseException as e:
-                await self._handle_error(e, channel.send, game_id)
-
-    def should_send_message(self, game_id: str, game_info: Match) -> bool:
-        sent_message = self.sent_messages.get(game_id, None)
-        player = game_info.current_player.UserName
-        hours_remaining = game_info.hours_remaining
-        return (sent_message is None  # no messages sent
-                or sent_message.player != player  # player's turn changed
-                or (hours_remaining is not None and sent_message.hours_remaining is not None
-                    and hours_remaining < 24 < sent_message.hours_remaining))  # out of time warning
+        try:
+            for channel_id, match in self.dc.get_matches():
+                channel = self.get_channel(channel_id)
+                if self.dc.should_send_message(channel_id, match):
+                    await self.send_message(channel.send, channel_id, match)
+        except BaseException:
+            admin_channel = self.get_channel(ADMIN_CHANNEL).send if not self.in_error_state else None
+            self.in_error_state = True
+            await _handle_error(admin_channel, "checking turns")
+        else:
+            self.in_error_state = False
 
     async def send_message(self,
                            send_func: Callable[[str], Awaitable[nextcord.message.Message]],
-                           game_id: str,
-                           game_info: Match) -> None:
-        hours_remaining = game_info.hours_remaining
-        player = game_info.current_player.UserName
+                           channel: int,
+                           match: Match | str) -> None:
+        message_type = self.dc.get_message_type(match)
+        hours_remaining = None if isinstance(match, str) else match.hours_remaining
+        player = None if isinstance(match, str) else match.current_player_name
+        subscriptions = self.dc.get_subscriptions(channel)
         tagged_users = (
-            ", ".join([f"<@{subscriber}>" for subscriber in self.subscriptions[player]])
-            if player in self.subscriptions
+            ", ".join([f"<@{subscriber}>" for subscriber in subscriptions[player]])
+            if player in subscriptions
             else ""
         )
-
-        if game_info.is_completed:
-            await send_func(f"Game {game_id} is Complete!")
-        elif game_info.waiting_to_start:
-            await send_func(f"Game {game_id} is waiting to start")
-        elif hours_remaining is not None and hours_remaining <= 24:
+        if message_type == MessageType.ERROR:
+            await send_func(f"Exception while checking {match} - check the logs")
+        if message_type == MessageType.GAME_COMPLETE:
+            await send_func(f"Game {match} is Complete!")
+        if message_type == MessageType.WAITING:
+            await send_func(f"Game {match} is waiting to start")
+        if message_type == MessageType.READY:
+            await send_func(f"Game {match} is ready to start")
+        if message_type == MessageType.NEW_TURN:
+            await send_func(
+                f"It's {player}'s{tagged_users} turn with {hours_remaining:.2f}"
+                f" hours remaining in match {match}"
+            )
+        if message_type == MessageType.REMINDER:
             await send_func(
                 f":rotating_light: {player}{tagged_users} only has {hours_remaining:.2f} hours remaining"
-                f"in match {game_id} :rotating_light:"
+                f"in match {match} :rotating_light:"
             )
-        elif hours_remaining is not None:
-            await send_func(
-                f"It's {player}'s{tagged_users} turn with {hours_remaining:.2f} hours remaining in match {game_id}"
-            )
-        else:
-            await send_func(f"Unknown error {game_id}: {game_info.data}")
-
-        self.sent_messages[game_id] = Message(player=player, hours_remaining=hours_remaining)
-        self.save_data()
+        self.dc.db.add_message(match, channel, player, message_type)  # TODO: move to dc
 
     @check_turns.before_loop  # type: ignore[misc]
     async def before_my_task(self) -> None:
         await self.wait_until_ready()  # wait until the bot logs in
 
-    async def _handle_error(
-            self,
-            exc: BaseException,
-            send_func: Callable[[str], Awaitable[nextcord.message.Message]],
-            game_id: str) -> None:
-        logger.warning(f"Exception for game {game_id}")
-        logger.warning("".join(traceback.format_exception(exc)))
-        if self.sent_messages[game_id] is None or not self.sent_messages[game_id].error_sent:
-            await send_func(f"Error for game {game_id} - check the logs")
-            self.sent_messages[game_id].error_sent = Message(None, None, True)
 
-    def load_commands(self) -> None:
-        @self.command()  # type: ignore[misc]
-        async def turn(ctx: Context) -> None:
-            """ Who's turn is it? """
-            for game_id in self.sent_messages:
-                try:
-                    game_info = self.wapi.get_game_info(game_id)
-                    await self.send_message(ctx.reply, game_id, game_info)
-                except BaseException as e:
-                    await self._handle_error(e, ctx.reply, game_id)
+class BotCommands(commands.Cog):  # type: ignore[misc]
+    def __init__(self, bot: Bot, data_controller: DataController):
+        self.bot = bot
+        self.dc = data_controller
 
-        @self.command()  # type: ignore[misc]
-        async def add(ctx: Context, game_id: str) -> None:
-            """ Add the game_id to be monitored """
-            if game_id in self.sent_messages:
-                await ctx.reply(f"Already monitoring game_id: {game_id}")
-            else:
-                game_info = self.wapi.get_game_info(game_id)
-                print(game_info.data)
-                if not game_info.valid:
-                    await ctx.reply(f"Invalid game_id: {game_id}")
-                else:
-                    self.sent_messages[game_id] = None
-                    await ctx.reply(f"Now monitoring game_id: {game_id}")
-                    self.save_data()
+    @commands.command()  # type: ignore[misc]
+    async def turn(self, ctx: Context) -> None:
+        """ Who's turn is it? """
+        try:
+            channel = ctx.channel.id
+            for _, match in self.dc.get_matches(channel):
+                if isinstance(match, str):
+                    await ctx.reply(f"Exception while checking {match} - check the logs")
+                    continue
+                await self.bot.send_message(ctx.reply, channel, match)
+        except BaseException:
+            await _handle_error(ctx.reply, "checking turns")
 
-        @self.command()  # type: ignore[misc]
-        async def remove(ctx: Context, game_id: str) -> None:
-            """ Remove the game_id from being monitored """
-            if game_id not in self.sent_messages:
-                await ctx.reply(f"Not monitoring game_id: {game_id}")
-            else:
-                del self.sent_messages[game_id]
-                await ctx.reply(f"No longer monitoring game_id: {game_id}")
-                self.save_data()
+    @commands.command()  # type: ignore[misc]
+    async def add(self, ctx: Context, game_id: str) -> None:
+        """ Add the game_id to be monitored """
+        await self.command_template(
+            ctx,
+            lambda: self.dc.add(ctx.channel.id, game_id),
+            f"Now monitoring {game_id}",
+            f"Already monitoring {game_id}",
+            f"adding match {game_id}, maybe an invalid ID?"
+        )
 
-        @self.command()  # type: ignore[misc]
-        async def subscribe(ctx: Context, username: str) -> None:
-            """ Provide a wingspan username you would like to receive notifications for """
-            subscriptions = self.subscriptions.get(username, set())
-            subscriptions.add(ctx.author.id)
-            self.subscriptions[username] = subscriptions
-            await ctx.reply(f"Now notifying {ctx.author.name} for {username}")
-            self.save_data()
+    @commands.command()  # type: ignore[misc]
+    async def remove(self, ctx: Context, game_id: str) -> None:
+        """ Remove the game_id from being monitored """
+        await self.command_template(
+            ctx,
+            lambda: self.dc.remove(ctx.channel.id, game_id),
+            f"No longer monitoring {game_id}",
+            f"Not monitoring {game_id}",
+            f"removing match {game_id}"
+        )
 
-        @self.command()  # type: ignore[misc]
-        async def unsubscribe(ctx: Context, username: str) -> None:
-            """ Unsubscribe from notifications for the wingspan username """
-            subscriptions = self.subscriptions.get(username, set())
-            if ctx.author.id not in subscriptions:
-                await ctx.reply(f"{ctx.author.name} is not subscribed to {username}")
-            else:
-                subscriptions.remove(ctx.author.id)
-                await ctx.reply(f"Unsubscribed {ctx.author.name} from {username}")
-                self.save_data()
+    @commands.command()  # type: ignore[misc]
+    async def subscribe(self, ctx: Context, wingspan_name: str) -> None:
+        """ Provide a wingspan username you would like to receive notifications for """
+        await self.command_template(
+            ctx,
+            lambda: self.dc.subscribe(ctx.channel.id, ctx.author.id, wingspan_name),
+            f"Now notifying {ctx.author.name} for {wingspan_name}",
+            f"Already subscribed to {wingspan_name}",
+            f"subscribing to {wingspan_name}"
+        )
+
+    @commands.command()  # type: ignore[misc]
+    async def unsubscribe(self, ctx: Context, wingspan_name: str) -> None:
+        """ Unsubscribe from notifications for the wingspan username """
+        await self.command_template(
+            ctx,
+            lambda: self.dc.unsubscribe(ctx.channel.id, ctx.author.id, wingspan_name),
+            f"No longer notifying for {wingspan_name}",
+            f"Not subscribed to {wingspan_name}",
+            f"unsubscribing from {wingspan_name}"
+        )
+
+    async def command_template(
+            self, ctx: Context,
+            func: Callable[[], bool],
+            success_msg: str,
+            failure_msg: str,
+            error_msg: str) -> None:
+        try:
+            success = func()
+            await ctx.reply(success_msg if success else failure_msg)
+        except BaseException:
+            await _handle_error(ctx.reply, error_msg)
+
+
+async def _handle_error(send_func: Callable[[str], Awaitable[nextcord.message.Message]] | None, data: str) -> None:
+    logger.error(f"Exception while {data}")
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    logger.error("".join(traceback.format_exception(exc_type, exc_value, exc_traceback)))
+    if send_func is not None:
+        await send_func(f"Exception while {data} - check the logs")

@@ -1,14 +1,16 @@
 [tool.poetry]
 name = "wingspan"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Steven Case <stcinc@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 requests = "^2.26.0"
-nextcord = "^2.0.0-alpha.5"
 dataclasses-json = "^0.5.7"
+alembic = "^1.7.7"
+SQLAlchemy = "^1.4.35"
+nextcord = "^2.0.0-alpha.10"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -16,6 +18,7 @@ mypy = "^0.931"
 types-requests = "^2.27.7"
 flake8 = "^4.0.1"
 pre-commit = "^2.17.0"
+SQLAlchemy = {extras = ["mypy"], version = "^1.4.35"}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

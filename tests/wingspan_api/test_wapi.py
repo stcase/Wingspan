@@ -14,16 +14,19 @@ in_progress_players = [Player(UserName="jeff", ChilliConnectID="jeff_id"),
 
 class TestWapi:
     @pytest.fixture
-    def wapi(self, monkeypatch: MonkeyPatch, game_in_progress: str, all_games: str) -> Wapi:
+    def wapi(self, monkeypatch: MonkeyPatch, game_in_progress: str, game_completed: str, games: str) -> Wapi:
         class MockRequest:
             def __init__(self, path: str, data: dict[str, str]) -> None:
                 if len(data) == 0:
-                    self.data = json.loads(all_games)
+                    self.result = json.loads(games)
                 else:
-                    self.data = json.loads(game_in_progress)
+                    if data["MatchID"] == "in-progress-match-id":
+                        self.result = json.loads(game_in_progress)
+                    else:
+                        self.result = json.loads(game_completed)
 
             def json(self) -> Any:
-                return self.data
+                return self.result
 
         monkeypatch.setattr(Wapi, "_get_info", MockRequest)
         wapi = Wapi("test_token")
@@ -39,6 +42,12 @@ class TestWapi:
         expected = Player(UserName="victor", ChilliConnectID="victor_id")
         actual = wapi.get_game_info("in-progress-match-id").current_player
         assert actual == expected
+
+    def test_current_player_name_in_progress(self, wapi: Wapi) -> None:
+        assert wapi.get_game_info("in-progress-match-id").current_player_name == "victor"
+
+    def test_current_player_name_completed(self, wapi: Wapi) -> None:
+        assert wapi.get_game_info("completed-match-id").current_player_name is None
 
     def test_hours_remaining_in_progress(self, wapi: Wapi) -> None:
         assert wapi.get_game_info("in-progress-match-id").hours_remaining == 42

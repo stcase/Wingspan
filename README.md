@@ -9,6 +9,7 @@
 4. Get the bot's token [from here](https://discord.com/developers/applications/), if you're the owner
 5. Copy `configs_exmaple.py` to `configs.py` and update the contents
 6. Install git hooks with `poetry run pre-commit install`
+7. Setup the database (see below)
 
 ### Setting up SteamworksPy on Windows-64
 1. Download the [Steamworks SDK](https://partner.steamgames.com/)
@@ -18,6 +19,9 @@
 3. Copy the latest `SteamworksPy.dll` to the enlistment root from the
    [pre-built versions](https://github.com/philippj/SteamworksPy/releases)
 4. Copy the `steamworks` folder for the corresponding version to the enlistment root from the SteamworksPy source code
+
+### Setting up the database
+1. Run `poetry run alembic upgrade head`
 
 ## Testing
 
