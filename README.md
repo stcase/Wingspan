@@ -32,6 +32,16 @@ Run `poetry run pytest`
 1. Ensure the Steam client is running
 2. Run `poetry run python main.py -h` for next steps
 
+## TODO
+
+- Add `!stats` command to report stats like
+  - How many games have been monitored
+  - Fastest to play their turns
+  - Slowest?
+- Move user tagging to the data controller
+- Caching in get_matches
+- Better handling of config file when type checking
+
 ## References
 Steam
 - https://partner.steamgames.com/doc/features/auth#client_to_client
