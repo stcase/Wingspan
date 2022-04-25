@@ -89,13 +89,17 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
     @commands.command()  # type: ignore[misc]
     async def turn(self, ctx: Context) -> None:
         """ Who's turn is it? """
+        matches_checked = 0
         try:
             channel = ctx.channel.id
             for _, match in self.dc.get_matches(channel):
+                matches_checked += 1
                 if isinstance(match, str):
                     await ctx.reply(f"Exception while checking {match} - check the logs")
                     continue
                 await self.bot.send_message(ctx.reply, channel, match)
+            if matches_checked == 0:
+                await ctx.reply("No matches found for this channel")
         except BaseException:
             await _handle_error(ctx.reply, "checking turns")
 
