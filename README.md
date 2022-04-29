@@ -2,6 +2,9 @@
 
 # Wingspan Bot
 
+A discord bot that posts whose turn it is for your Wingspan games.
+Because it's easy to miss the Steam notifications, and annoying to launch the game only to see that it's not your turn.
+
 ## Setup
 1. Get a local enlistment of this project
 2. Install [Poetry](https://python-poetry.org/)
