@@ -5,6 +5,8 @@ __pycache__
 
 /.idea
 
+/.coverage
+
 /steamworks/**/*.py
 steam_api64.dll
 steam_api64.lib

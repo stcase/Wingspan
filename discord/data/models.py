@@ -40,3 +40,18 @@ class Subscription(Base):
     channel = Column(Integer, nullable=False)
     discord_id = Column(Integer, nullable=False)
     wingspan_name = Column(String, nullable=False)
+
+
+class Score(Base):
+    __tablename__ = "score"
+    match_id = Column(String, primary_key=True)
+    player_name = Column(String, primary_key=True)
+    updated = Column(DateTime, nullable=False)
+    score = Column(Integer, nullable=False)
+    bird_points = Column(Integer, nullable=False)
+    bonus_card_points = Column(Integer, nullable=False)
+    goals_points = Column(Integer, nullable=False)
+    eggs_points = Column(Integer, nullable=False)
+    cached_food_points = Column(Integer, nullable=False)
+    tucked_cards_points = Column(Integer, nullable=False)
+    food_tokens = Column(Integer, nullable=False)

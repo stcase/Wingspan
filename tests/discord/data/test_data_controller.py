@@ -1,6 +1,12 @@
+from unittest.mock import MagicMock, call
+
 import pytest
+from freezegun import freeze_time
 
 from discord.data.data_controller import DataController
+from discord.data.data_objects import FastestPlayer, PlayerStat
+from discord.data.models import MessageType
+from tests.conftest import MessageTestData
 
 
 class TestDataController:
@@ -25,8 +31,16 @@ class TestDataController:
 
     def test_get_matches(self, dc_monitor_many: DataController) -> None:
         dc_monitor_many.wapi.get_game_info.side_effect = ["game 1", "game 2", "game 3"]  # type: ignore[attr-defined]
+        dc_monitor_many.db.add_or_update_score = MagicMock()  # type: ignore[assignment]
         matches = set(dc_monitor_many.get_matches(1))
         assert matches == {(1, "game 1"), (1, "game 2"), (1, "game 3")}
+
+    def test_get_matches_updated_score(self, dc_monitor_many: DataController) -> None:
+        dc_monitor_many.wapi.get_game_info.side_effect = ["game 1", "game 2", "game 3"]  # type: ignore[attr-defined]
+        dc_monitor_many.db.add_or_update_score = MagicMock()  # type: ignore[assignment]
+        set(dc_monitor_many.get_matches(1))
+        dc_monitor_many.db.add_or_update_score.assert_has_calls([call("game 1"), call("game 2"), call("game 3")])
+        assert dc_monitor_many.db.add_or_update_score.call_count == 3
 
     def test_get_matches_empty(self, dc_monitor_many: DataController) -> None:
         matches = list(dc_monitor_many.get_matches(5))
@@ -42,16 +56,16 @@ class TestDataController:
         assert len(data_controller.db.get_matches()) == 1
 
     def test_add_to_many(self, dc_monitor_many: DataController) -> None:
-        before = dc_monitor_many.db.get_matches()
+        before = dc_monitor_many.get_monitored_matches()
         assert dc_monitor_many.add(2, "game2")
-        after = dc_monitor_many.db.get_matches()
+        after = dc_monitor_many.get_monitored_matches()
         assert before[1] == after[1]
         assert before[2] != after[2]
 
     def test_add_already_present(self, dc_monitor_many: DataController) -> None:
-        before = dc_monitor_many.db.get_matches()
+        before = dc_monitor_many.get_monitored_matches()
         assert not dc_monitor_many.add(1, "game3")
-        after = dc_monitor_many.db.get_matches()
+        after = dc_monitor_many.get_monitored_matches()
         assert before == after
 
     def test_remove_empty(self, data_controller: DataController) -> None:
@@ -64,9 +78,9 @@ class TestDataController:
         assert before != after
 
     def test_remove_nonexistent_from_many(self, dc_monitor_many: DataController) -> None:
-        before = dc_monitor_many.db.get_matches()
+        before = dc_monitor_many.get_monitored_matches()
         assert not dc_monitor_many.remove(5, "game2")
-        after = dc_monitor_many.db.get_matches()
+        after = dc_monitor_many.get_monitored_matches()
         assert before == after
 
     def test_add_remove_add(self, data_controller: DataController) -> None:
@@ -127,3 +141,78 @@ class TestDataController:
 
     def test_unsubscribe_empty(self, data_controller: DataController) -> None:
         assert not data_controller.unsubscribe(1, 1, "user1")
+
+    def test_add_message_empty(self, data_controller: DataController, message_expecteds: MessageTestData) -> None:
+        data_controller.add_message(
+            match=message_expecteds.match_id,
+            channel=message_expecteds.channel,
+            player=message_expecteds.player_id,
+            message_type=message_expecteds.msg_type)
+        actual = data_controller.db.get_previous_message(message_expecteds.channel, message_expecteds.match_id)
+        message_expecteds.assert_equal_status_message(actual)
+
+    def test_fastest_player(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match-id", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match-id", 1, "player2", MessageType.NEW_TURN)
+        assert (data_controller.get_fastest_player(1, "match-id") ==
+                FastestPlayer(PlayerStat(wingspan_names=["player1"], score=24)))
+
+    def test_fastest_player_completed(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match-id", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match-id", 1, None, MessageType.GAME_COMPLETE)
+        assert (data_controller.get_fastest_player(1) ==
+                FastestPlayer(PlayerStat(wingspan_names=["player1"], score=24)))
+
+    def test_fastest_player_error(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match-id", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match-id", 1, None, MessageType.ERROR)
+        assert (data_controller.get_fastest_player(1) ==
+                FastestPlayer(PlayerStat(wingspan_names=[], score=0)))
+
+    def test_fastest_player_incomplete(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match1", 1, "player1", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match2", 1, "player2", MessageType.NEW_TURN)
+
+        assert (data_controller.get_fastest_player(1, "match1") ==
+                FastestPlayer(PlayerStat(wingspan_names=[], score=0)))
+
+    def test_fastest_player_many(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match1", 1, "player1", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match1", 1, "player2", MessageType.NEW_TURN)
+        with freeze_time("2022-1-3"):
+            data_controller.add_message("match1", 1, "player1", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player2", MessageType.NEW_TURN)
+        with freeze_time("2022-1-4"):
+            data_controller.add_message("match1", 1, "player2", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player1", MessageType.NEW_TURN)
+
+        assert data_controller.get_fastest_player(1) == FastestPlayer(PlayerStat(wingspan_names=["player2"], score=24))
+
+    def test_fastest_player_tie(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1"):
+            data_controller.add_message("match1", 1, "player1", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-2"):
+            data_controller.add_message("match1", 1, "player2", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player2", MessageType.NEW_TURN)
+        with freeze_time("2022-1-3"):
+            data_controller.add_message("match1", 1, "player1", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player1", MessageType.NEW_TURN)
+        with freeze_time("2022-1-4"):
+            data_controller.add_message("match1", 1, "player2", MessageType.NEW_TURN)
+            data_controller.add_message("match2", 1, "player2", MessageType.NEW_TURN)
+
+        assert (data_controller.get_fastest_player(1) ==
+                FastestPlayer(PlayerStat(wingspan_names=["player1", "player2"], score=24)))

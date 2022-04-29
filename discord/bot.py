@@ -74,7 +74,7 @@ class Bot(commands.Bot):  # type: ignore[misc]
                 f":rotating_light: {player}{tagged_users} only has {hours_remaining:.2f} hours remaining"
                 f"in match {match} :rotating_light:"
             )
-        self.dc.db.add_message(match, channel, player, message_type)  # TODO: move to dc
+        self.dc.add_message(match, channel, player, message_type)
 
     @check_turns.before_loop  # type: ignore[misc]
     async def before_my_task(self) -> None:
@@ -159,10 +159,33 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
         except BaseException:
             await _handle_error(ctx.reply, error_msg)
 
+    @commands.command()  # type: ignore[misc]
+    async def stats(self, ctx: Context, game_id: str | None) -> None:
+        try:
+            if game_id is not None:
+                header = f"Stats for {game_id} "
+            else:
+                header = (
+                    "Global channel data:\n"
+                    f"{len(self.dc.get_monitored_matches(ctx.channel.id))} matches monitored "
 
-async def _handle_error(send_func: Callable[[str], Awaitable[nextcord.message.Message]] | None, data: str) -> None:
-    logger.error(f"Exception while {data}")
+                )
+            header += f"since {self.dc.get_data_start(ctx.channel.id, game_id)}\n"
+            await ctx.reply(
+                header +
+                "```"
+                f"{self.dc.get_fastest_player(ctx.channel.id, game_id)}"
+                f"{self.dc.get_highest_scores(game_id)}"  # TODO: also filter on channel
+                "```"
+            )
+        except BaseException:
+            await _handle_error(ctx.reply, f"getting stats for match {game_id}")
+
+
+async def _handle_error(
+        send_func: Callable[[str], Awaitable[nextcord.message.Message]] | None, error_action: str) -> None:
+    logger.error(f"Exception while {error_action}")
     exc_type, exc_value, exc_traceback = sys.exc_info()
     logger.error("".join(traceback.format_exception(exc_type, exc_value, exc_traceback)))
     if send_func is not None:
-        await send_func(f"Exception while {data} - check the logs")
+        await send_func(f"Exception while {error_action} - check the logs")

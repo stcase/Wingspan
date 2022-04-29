@@ -67,7 +67,7 @@ def save_game_info(match_id: str, file_name: str) -> None:
     wapi = Wapi()
     game_info = wapi.get_game_info(match_id)
     with Path(file_name).open("w") as f:
-        f.write(game_info.to_json())  # type: ignore[attr-defined]
+        f.write(game_info.to_json())
 
 
 def run_bot() -> None:

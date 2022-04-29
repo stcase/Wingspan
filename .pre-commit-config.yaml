@@ -17,3 +17,11 @@ repos:
     rev: 'v0.931'
     hooks:
     -   id: mypy
+        args: [--ignore-missing-imports, --no-warn-unused-ignores]
+        additional_dependencies:
+            - sqlalchemy[mypy]
+            - alembic
+            - types-requests
+            - dataclasses-json
+            - freezegun
+            - pytest

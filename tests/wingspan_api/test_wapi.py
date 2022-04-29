@@ -38,6 +38,11 @@ class TestWapi:
     def test_players_in_game(self, wapi: Wapi) -> None:
         assert wapi.get_game_info("in-progress-match-id").Players == in_progress_players
 
+    def test_get_player(self, wapi: Wapi) -> None:
+        expected = Player(UserName="steven", ChilliConnectID="steven_id")
+        actual = wapi.get_game_info("in-progress-match-id").get_player(expected.ChilliConnectID)
+        assert actual == expected
+
     def test_current_player(self, wapi: Wapi) -> None:
         expected = Player(UserName="victor", ChilliConnectID="victor_id")
         actual = wapi.get_game_info("in-progress-match-id").current_player
