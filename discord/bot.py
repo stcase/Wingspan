@@ -71,7 +71,7 @@ class Bot(commands.Bot):  # type: ignore[misc]
             )
         if message_type == MessageType.REMINDER:
             await send_func(
-                f":rotating_light: {player}{tagged_users} only has {hours_remaining:.2f} hours remaining"
+                f":rotating_light: {player}{tagged_users} only has {hours_remaining:.2f} hours remaining "
                 f"in match {match} :rotating_light:"
             )
         self.dc.add_message(match, channel, player, message_type)
