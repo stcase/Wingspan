@@ -68,9 +68,12 @@ class TestDBConnection:
         db.add_or_update_score(game_completed_obj)
         assert len(db.get_highest_eggs_points("non-existent-match")) == 0
 
-    def test_get_highest_cached_food_points(self, db: DBConnection, game_completed_obj: Match) -> None:
+    def test_get_highest_cached_food_points_multiple_games(
+            self, db: DBConnection, game_completed_obj: Match, game_in_progress_obj: Match) -> None:
         db.add_or_update_score(game_completed_obj)
-        assert iterable_to_scalar(db.get_highest_cached_food_points())[1] == 9
+        db.add_or_update_score(game_in_progress_obj)
+        assert iterable_to_scalar(db.get_highest_cached_food_points("in-progress-match-id"))[1] == 4
+        assert iterable_to_scalar(db.get_highest_cached_food_points("completed-match-id"))[1] == 9
 
     def test_get_highest_tucked_card_points_tie(self, db: DBConnection, game_completed_obj: Match) -> None:
         db.add_or_update_score(game_completed_obj)

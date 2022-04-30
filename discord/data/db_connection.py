@@ -61,10 +61,12 @@ class DBConnection:
 
     def _get_highest_score(self, match: Match | str | None, score_type: Type[Column[Integer]]) -> list[Row]:
         with self.Session() as session:
-            statement = select(Score.player_name, score_type).filter(
-                score_type == select(func.max(score_type)))  # type: ignore[comparison-overlap]
+            max_score = select(func.max(score_type))
+            statement = select(Score.player_name, score_type)
             if match is not None:
                 statement = statement.filter(Score.match_id == str(match))
+                max_score = max_score.filter(Score.match_id == str(match))
+            statement = statement.filter(score_type == max_score)  # type: ignore[comparison-overlap]
             return session.execute(statement).all()
 
     def get_scores(self, match: Match | str) -> list[Score]:
