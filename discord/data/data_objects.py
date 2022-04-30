@@ -38,7 +38,7 @@ class ScoreStats:
             f"Highest score:                     {self.highest_score}\n"
             f"Most points from birds:            {self.highest_bird_points}\n"
             f"Most points from bonus cards:      {self.highest_bonus_card_points}\n"
-            f"Most points from goal cards:       {self.highest_goal_points}\n"
+            f"Most points from goals:            {self.highest_goal_points}\n"
             f"Most points from eggs:             {self.highest_eggs_points}\n"
             f"Most points from cached food:      {self.highest_cached_food_points}\n"
             f"Most points from tucked cards:     {self.highest_tucked_card_points}\n"
