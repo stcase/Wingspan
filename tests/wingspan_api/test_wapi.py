@@ -14,16 +14,26 @@ in_progress_players = [Player(UserName="jeff", ChilliConnectID="jeff_id"),
 
 class TestWapi:
     @pytest.fixture
-    def wapi(self, monkeypatch: MonkeyPatch, game_in_progress: str, game_completed: str, games: str) -> Wapi:
+    def wapi(self,
+             monkeypatch: MonkeyPatch,
+             game_in_progress: str,
+             game_completed: str,
+             game_timed_out: str,
+             games: str) -> Wapi:
         class MockRequest:
             def __init__(self, path: str, data: dict[str, str]) -> None:
                 if len(data) == 0:
                     self.result = json.loads(games)
                 else:
-                    if data["MatchID"] == "in-progress-match-id":
+                    match_id = data["MatchID"]
+                    if match_id == "in-progress-match-id":
                         self.result = json.loads(game_in_progress)
-                    else:
+                    elif match_id == "completed-match-id":
                         self.result = json.loads(game_completed)
+                    elif match_id == "timed-out-match-id":
+                        self.result = json.loads(game_timed_out)
+                    else:
+                        raise ValueError(f"Unexpected match id: {match_id}")
 
             def json(self) -> Any:
                 return self.result
@@ -56,3 +66,11 @@ class TestWapi:
 
     def test_hours_remaining_in_progress(self, wapi: Wapi) -> None:
         assert wapi.get_game_info("in-progress-match-id").hours_remaining == 42
+
+    @pytest.mark.parametrize(
+        "game_id,expected", [
+            ("timed-out-match-id", True),
+            ("in-progress-match-id", False),
+            ("completed-match-id", False)])
+    def test_is_timed_out(self, wapi: Wapi, game_id: str, expected: bool) -> None:
+        assert wapi.get_game_info(game_id).is_timed_out() == expected

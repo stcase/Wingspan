@@ -39,6 +39,7 @@ Run `poetry run pytest --cov discord --cov wingspan_api` from the root of the en
 - Caching in get_matches
 - Better handling of config file when type checking
 - Get match test data for WAITING, READY, and REMINDER
+- Get test data for a matches object with a completed match
 - Filter highest score stats on channel
 
 ## References

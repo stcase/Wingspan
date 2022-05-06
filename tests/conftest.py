@@ -8,7 +8,7 @@ import pytest
 from discord.data.data_controller import DataController
 from discord.data.db_connection import DBConnection
 from discord.data.models import Base, MessageType, StatusMessage
-from wingspan_api.wapi import Wapi, Match, State
+from wingspan_api.wapi import Wapi, Match, MatchState
 
 data_folder = Path("tests/data/")
 
@@ -16,6 +16,12 @@ data_folder = Path("tests/data/")
 @pytest.fixture
 def game_in_progress() -> str:
     with (data_folder / "game_in_progress.json").open("r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def game_timed_out() -> str:
+    with (data_folder / "game_timed_out.json").open("r") as f:
         return f.read()
 
 
@@ -37,11 +43,16 @@ def game_in_progress_obj(game_in_progress: str) -> Match:
 
 
 @pytest.fixture
-def game_in_progress_timeout_obj(game_in_progress: str) -> Match:
+def game_in_progress_low_time_obj(game_in_progress: str) -> Match:
     match = Match.from_dict(json.loads(game_in_progress)["Match"])
     assert match.TurnTimeout is not None
     match.TurnTimeout.SecondsRemaining = 10  # TODO, use real data
     return match
+
+
+@pytest.fixture
+def game_timed_out_obj(game_timed_out: str) -> Match:
+    return Match.from_dict(json.loads(game_timed_out)["Match"])
 
 
 @pytest.fixture
@@ -52,15 +63,14 @@ def game_completed_obj(game_completed: str) -> Match:
 @pytest.fixture
 def game_ready_obj(game_in_progress: str) -> Match:
     match = Match.from_dict(json.loads(game_in_progress)["Match"])
-    match.State = State.READY  # TODO, use real data
-    match.current_player
+    match.State = MatchState.READY  # TODO, use real data
     return match
 
 
 @pytest.fixture
 def game_waiting_obj(game_in_progress: str) -> Match:
     match = Match.from_dict(json.loads(game_in_progress)["Match"])
-    match.State = State.WAITING  # TODO, use real data
+    match.State = MatchState.WAITING  # TODO, use real data
     return match
 
 

@@ -9,7 +9,7 @@ from typing import overload
 from discord.data.data_objects import ScoreStats, PlayerStat, FastestPlayer
 from discord.data.db_connection import DBConnection
 from discord.data.models import MessageType
-from wingspan_api.wapi import Match, Wapi, State
+from wingspan_api.wapi import Match, Wapi, MatchState
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +51,13 @@ class DataController:
     def get_message_type(match: Match | str) -> MessageType:
         if isinstance(match, str):
             return MessageType.ERROR
-        if match.State == State.WAITING:
+        if match.State == MatchState.WAITING:
             return MessageType.WAITING
-        if match.State == State.READY:
+        if match.State == MatchState.READY:
             return MessageType.READY
-        if match.State == State.COMPLETED:
+        if match.is_timed_out():
+            return MessageType.GAME_TIMEOUT
+        if match.State == MatchState.COMPLETED:
             return MessageType.GAME_COMPLETE
         if match.hours_remaining is None:
             raise ValueError("Unexpected None for hours_remaining")

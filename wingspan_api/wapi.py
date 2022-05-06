@@ -22,7 +22,7 @@ except ImportError:
 HOST = "https://connect.chilliconnect.com"
 
 
-class State(Enum):
+class MatchState(Enum):
     IN_PROGRESS = "IN_PROGRESS"
     READY = "READY"
     WAITING = "WAITING"  # waiting for the match to start
@@ -40,6 +40,11 @@ class Score(DataClassJsonMixin):
     CachedFoodPoints: int
     TuckedCardsPoints: int
     FoodTokens: int
+
+
+@dataclass
+class OutcomeData(DataClassJsonMixin):
+    Winner: str
 
 
 @dataclass
@@ -67,11 +72,19 @@ class Player(DataClassJsonMixin):
 @dataclass
 class Match(DataClassJsonMixin):
     MatchID: str
-    State: State
+    State: MatchState
     WaitingTimeout: Timeout | None
     TurnTimeout: Timeout | None
     Players: list[Player]
     StateData: StateData | None = None  # not in the data from Matches
+    OutcomeData: OutcomeData | None = None  # not in the data from Matches?, null if game not complete
+
+    def is_timed_out(self) -> bool:
+        """
+        Returns true if the game completed from a timeout, false otherwise or if it doesn't have complete match info
+        (and thus it can't be determined whether it ended with a timeout or not)
+        """
+        return self.State == MatchState.COMPLETED and self.OutcomeData is None and self.StateData is not None
 
     def get_player(self, player_id: str) -> Player | None:
         for player in self.Players:
@@ -96,11 +109,11 @@ class Match(DataClassJsonMixin):
 
     @property
     def hours_remaining(self) -> float | None:
-        if self.State == State.IN_PROGRESS:
+        if self.State == MatchState.IN_PROGRESS:
             if self.TurnTimeout is None:
                 raise ValueError("Unexpected game state")
             return self.TurnTimeout.SecondsRemaining / 60 / 60
-        if self.State == State.WAITING:
+        if self.State == MatchState.WAITING:
             if self.WaitingTimeout is None:
                 raise ValueError("Unexpected game state")
             return self.WaitingTimeout.SecondsRemaining / 60 / 60

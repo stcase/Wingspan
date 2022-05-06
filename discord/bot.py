@@ -60,6 +60,8 @@ class Bot(commands.Bot):  # type: ignore[misc]
             await send_func(f"Exception while checking {match} - check the logs")
         if message_type == MessageType.GAME_COMPLETE:
             await send_func(f"Game {match} is Complete!")
+        if message_type == MessageType.GAME_TIMEOUT:
+            await send_func(f"Game {match} timed out on {player}'s{tagged_users} turn :(")
         if message_type == MessageType.WAITING:
             await send_func(f"Game {match} is waiting to start")
         if message_type == MessageType.READY:

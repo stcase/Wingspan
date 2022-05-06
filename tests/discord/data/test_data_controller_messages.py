@@ -10,8 +10,8 @@ class TestDataControllerMessages:
         assert data_controller.get_message_type(game_in_progress_obj) == MessageType.NEW_TURN
 
     def test_get_message_type_reminder(
-            self, data_controller: DataController, game_in_progress_timeout_obj: Match) -> None:
-        assert data_controller.get_message_type(game_in_progress_timeout_obj) == MessageType.REMINDER
+            self, data_controller: DataController, game_in_progress_low_time_obj: Match) -> None:
+        assert data_controller.get_message_type(game_in_progress_low_time_obj) == MessageType.REMINDER
 
     def test_get_message_type_completed(self, data_controller: DataController, game_completed_obj: Match) -> None:
         assert data_controller.get_message_type(game_completed_obj) == MessageType.GAME_COMPLETE
@@ -24,6 +24,9 @@ class TestDataControllerMessages:
 
     def test_get_message_type_error(self, data_controller: DataController) -> None:
         assert data_controller.get_message_type("error") == MessageType.ERROR
+
+    def test_get_message_timed_out(self, data_controller: DataController, game_timed_out_obj: Match) -> None:
+        assert data_controller.get_message_type(game_timed_out_obj) == MessageType.GAME_TIMEOUT
 
     def helper_should_send_message(
             self,
@@ -60,13 +63,13 @@ class TestDataControllerMessages:
             (("victor", MessageType.REMINDER), False),
             (("prev_player", MessageType.REMINDER), True),
             ((None, MessageType.ERROR), True)])
-    def test_should_send_message_in_progress_timeout(
+    def test_should_send_message_in_progress_low_time(
             self,
             data_controller: DataController,
-            game_in_progress_timeout_obj: Match,
+            game_in_progress_low_time_obj: Match,
             sent_message: tuple[str | None, MessageType] | None,
             expected: bool) -> None:
-        self.helper_should_send_message(data_controller, game_in_progress_timeout_obj, sent_message, expected)
+        self.helper_should_send_message(data_controller, game_in_progress_low_time_obj, sent_message, expected)
 
     @pytest.mark.parametrize(
         "sent_message, expected", [
@@ -80,6 +83,19 @@ class TestDataControllerMessages:
             sent_message: tuple[str | None, MessageType] | None,
             expected: bool) -> None:
         self.helper_should_send_message(data_controller, game_completed_obj, sent_message, expected)
+
+    @pytest.mark.parametrize(
+        "sent_message, expected", [
+            (("miguel", MessageType.REMINDER), True),
+            (("miguel", MessageType.GAME_TIMEOUT), False),
+        ])
+    def test_should_send_message_timed_out(
+            self,
+            data_controller: DataController,
+            game_timed_out_obj: Match,
+            sent_message: tuple[str | None, MessageType] | None,
+            expected: bool) -> None:
+        self.helper_should_send_message(data_controller, game_timed_out_obj, sent_message, expected)
 
     @pytest.mark.parametrize(
         "sent_message, expected", [

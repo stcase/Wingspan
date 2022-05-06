@@ -20,6 +20,7 @@ class MessageType(enum.Enum):
     NEW_TURN = "new_turn"
     REMINDER = "reminder"
     GAME_COMPLETE = "complete"
+    GAME_TIMEOUT = "timeout"
     WAITING = "waiting"
     READY = "ready"
 
