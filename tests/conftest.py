@@ -91,6 +91,16 @@ def data_controller(db: DBConnection) -> DataController:
     return data_controller
 
 
+@pytest.fixture
+def dc_monitor_many(data_controller: DataController) -> DataController:
+    data_controller.add(1, "game1")
+    data_controller.add(1, "game2")
+    data_controller.add(1, "game3")
+    data_controller.add(2, "game1")
+    data_controller.add(2, "game4")
+    return data_controller
+
+
 @dataclasses.dataclass
 class MessageTestData:
     match_id: str

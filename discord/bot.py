@@ -1,10 +1,9 @@
 import logging
 import sys
 import traceback
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from typing import Any, TYPE_CHECKING
 
-import nextcord
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
 
@@ -19,6 +18,8 @@ else:
 
 logger = logging.getLogger(__name__)
 
+SEND_FUNC = Callable[[str], Coroutine[Any, Any, None]]
+
 
 class Bot(commands.Bot):  # type: ignore[misc]
     def __init__(self, data_controller: DataController, *args: Any, **kwargs: Any):
@@ -29,22 +30,41 @@ class Bot(commands.Bot):  # type: ignore[misc]
         self.add_cog(BotCommands(self, data_controller))
         self.in_error_state = False
 
+    def get_admin_channel_send(self) -> Any:
+        admin_channel = self.get_channel(ADMIN_CHANNEL)
+        if admin_channel is None:
+            return None
+        return admin_channel.send
+
     @tasks.loop(minutes=5)  # type: ignore[misc]
     async def check_turns(self) -> None:
         try:
             for channel_id, match in self.dc.get_matches():
                 channel = self.get_channel(channel_id)
                 if self.dc.should_send_message(channel_id, match):
-                    await self.send_message(channel.send, channel_id, match)
+                    if channel is None:
+                        await self.channel_not_found(channel_id)
+                    else:
+                        await self.send_message(channel.send, channel_id, match)
         except BaseException:
-            admin_channel = self.get_channel(ADMIN_CHANNEL).send if not self.in_error_state else None
+            admin_channel = self.get_admin_channel_send() if not self.in_error_state else None
             self.in_error_state = True
             await _handle_error(admin_channel, "checking turns")
         else:
             self.in_error_state = False
 
+    async def channel_not_found(self, channel_id: int) -> None:
+        log_func: SEND_FUNC = self.get_admin_channel_send()
+        if log_func is None:
+            async def log_func(s: str) -> None:
+                logger.info(s)
+        await log_func(f"Channel {channel_id} not found. Removing matches from channel...")
+        for match_id in self.dc.get_monitored_matches(channel_id=channel_id):
+            self.dc.remove(channel=channel_id, game_id=match_id)
+            await log_func(f" Removed match {match_id}")
+
     async def send_message(self,
-                           send_func: Callable[[str], Awaitable[nextcord.message.Message]],
+                           send_func: SEND_FUNC,
                            channel: int,
                            match: Match | str) -> None:
         message_type = self.dc.get_message_type(match)
@@ -185,7 +205,7 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
 
 
 async def _handle_error(
-        send_func: Callable[[str], Awaitable[nextcord.message.Message]] | None, error_action: str) -> None:
+        send_func: SEND_FUNC | None, error_action: str) -> None:
     logger.error(f"Exception while {error_action}")
     exc_type, exc_value, exc_traceback = sys.exc_info()
     logger.error("".join(traceback.format_exception(exc_type, exc_value, exc_traceback)))

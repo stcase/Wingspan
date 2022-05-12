@@ -66,7 +66,7 @@ class DBConnection:
             if match is not None:
                 statement = statement.filter(Score.match_id == str(match))
                 max_score = max_score.filter(Score.match_id == str(match))
-            statement = statement.filter(score_type == max_score)  # type: ignore[comparison-overlap]
+            statement = statement.filter(score_type == max_score.scalar_subquery())
             return session.execute(statement).all()
 
     def get_scores(self, match: Match | str) -> list[Score]:

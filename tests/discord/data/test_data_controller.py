@@ -10,15 +10,6 @@ from tests.conftest import MessageTestData
 
 
 class TestDataController:
-    @pytest.fixture
-    def dc_monitor_many(self, data_controller: DataController) -> DataController:
-        data_controller.add(1, "game1")
-        data_controller.add(1, "game2")
-        data_controller.add(1, "game3")
-        data_controller.add(2, "game1")
-        data_controller.add(2, "game4")
-        return data_controller
-
     def test_get_all_matches(self, dc_monitor_many: DataController) -> None:
         dc_monitor_many.wapi.get_game_info.side_effect = [  # type: ignore[attr-defined]
             "game1", "game2", "game3", "game1", "game4"]

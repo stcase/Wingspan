@@ -41,6 +41,8 @@ Run `poetry run pytest --cov discord --cov wingspan_api` from the root of the en
 - Get match test data for WAITING, READY, and REMINDER
 - Get test data for a matches object with a completed match
 - Filter highest score stats on channel
+- Automatically capture games names from tcp https://dpkt.readthedocs.io/en/latest/print_http_requests.html
+- Stats is only counting currently monitored matches, not all matches monitored
 
 ## References
 Steam
