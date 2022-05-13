@@ -10,7 +10,7 @@ from wingspan_bot.data.data_controller import DataController
 class TestBot:
     @pytest.fixture
     def bot(self, dc_monitor_many: DataController) -> Bot:
-        bot = Bot(dc_monitor_many)
+        bot = Bot(admin_channel=0, data_controller=dc_monitor_many)
         return bot
 
     @pytest.fixture

@@ -9,9 +9,9 @@ from wingspan_bot.data.db_connection import DBConnection
 from wingspan_bot.data.data_controller import DataController
 
 if TYPE_CHECKING:
-    from configs_example import BOT_SECRET_TOKEN, DB_CONNECTION
+    from configs_example import ADMIN_CHANNEL, BOT_SECRET_TOKEN, DB_CONNECTION
 else:
-    from configs import BOT_SECRET_TOKEN, DB_CONNECTION
+    from configs import ADMIN_CHANNEL, BOT_SECRET_TOKEN, DB_CONNECTION
 
 
 def main() -> None:
@@ -74,7 +74,7 @@ def run_bot() -> None:
     wapi = Wapi()
     db_conn = DBConnection(DB_CONNECTION)
     data_controller = DataController(db_connection=db_conn, wapi=wapi)
-    bot = Bot(data_controller=data_controller, command_prefix="!")
+    bot = Bot(admin_channel=ADMIN_CHANNEL, data_controller=data_controller, command_prefix="!")
     bot.run(BOT_SECRET_TOKEN)
 
 

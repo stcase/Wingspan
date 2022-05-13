@@ -2,7 +2,7 @@ import logging
 import sys
 import traceback
 from collections.abc import Callable, Coroutine
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
@@ -10,11 +10,6 @@ from nextcord.ext.commands import Context
 from wingspan_bot.data.data_controller import DataController
 from wingspan_bot.data.models import MessageType
 from wingspan_api.wapi import Match
-if TYPE_CHECKING:
-    # TODO: create a class that handles these configs
-    from configs_example import ADMIN_CHANNEL
-else:
-    from configs import ADMIN_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +17,9 @@ SEND_FUNC = Callable[[str], Coroutine[Any, Any, None]]
 
 
 class Bot(commands.Bot):  # type: ignore[misc]
-    def __init__(self, data_controller: DataController, *args: Any, **kwargs: Any):
+    def __init__(self, admin_channel: int, data_controller: DataController, *args: Any, **kwargs: Any):
         self.dc = data_controller
+        self.admin_channel = admin_channel
         super().__init__(*args, **kwargs)
 
         self.check_turns.start()  # start the task to run in the background
@@ -31,7 +27,7 @@ class Bot(commands.Bot):  # type: ignore[misc]
         self.in_error_state = False
 
     def get_admin_channel_send(self) -> Any:
-        admin_channel = self.get_channel(ADMIN_CHANNEL)
+        admin_channel = self.get_channel(self.admin_channel)
         if admin_channel is None:
             return None
         return admin_channel.send
