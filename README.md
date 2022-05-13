@@ -23,6 +23,14 @@ Because it's easy to miss the Steam notifications, and annoying to launch the ga
    [pre-built versions](https://github.com/philippj/SteamworksPy/releases)
 4. Copy the `steamworks` folder for the corresponding version to the enlistment root from the SteamworksPy source code
 
+## Creating a Windows .exe
+
+After completing the setup, you can create a windows .exe with the following command
+from a Window's machine at the project's root enlistment:
+```commandline
+poetry run pyinstaller main.py --add-data "SteamworksPy64.dll;." -F --add-data "steam_appid.txt;." --add-data "steam_api64.dll;." --add-data "steam_api64.lib;."
+```
+
 ## Testing
 
 Run `poetry run pytest --cov wingspan_bot --cov wingspan_api` from the root of the enlistment.

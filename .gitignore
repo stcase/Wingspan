@@ -11,3 +11,8 @@ __pycache__
 steam_api64.dll
 steam_api64.lib
 SteamworksPy64.dll
+
+#pyinstaller
+/build
+/dist
+main.spec

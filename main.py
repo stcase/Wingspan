@@ -1,5 +1,7 @@
 import argparse
 import logging
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -34,23 +36,33 @@ def main() -> None:
     group.add_argument("-b", "--bot", help="Run discord bot", action="store_true")
     args = parser.parse_args()
 
-    if args.list:
-        print_games()
-    elif args.info is not None:
+    try:
+        # If it succeeds we're running from a pyinstaller .exe file, so use it's temp directory
+        os.chdir(sys._MEIPASS)  # type: ignore[attr-defined]
+    except AttributeError:
+        pass
+
+    if args.info is not None:
         print_game_info(args.info)
     elif args.save is not None:
         save_game_info(args.save[0], args.save[1])
     elif args.bot:
         run_bot()
+    else:
+        print_games()
+    input("Press Enter to finish...")
 
 
 def print_games() -> None:
     wapi = Wapi()
     matches = wapi.get_games()
+    print("Current games in progress:")
     for match in matches.Matches:
         print(match.MatchID)
         for player in match.Players:
             print(f" {player.UserName}")
+    if len(matches.Matches) == 0:
+        print("No Wingspan games in progress")
 
 
 def print_game_info(match_id: str) -> None:
