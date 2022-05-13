@@ -38,31 +38,35 @@ class DBConnection:
                     tucked_cards_points=score.TuckedCardsPoints,
                     food_tokens=score.FoodTokens))
 
-    def get_highest_score(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.score)
+    def get_highest_score(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.score)
 
-    def get_highest_bird_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.bird_points)
+    def get_highest_bird_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.bird_points)
 
-    def get_highest_bonus_card_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.bonus_card_points)
+    def get_highest_bonus_card_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.bonus_card_points)
 
-    def get_highest_goals_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.goals_points)
+    def get_highest_goals_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.goals_points)
 
-    def get_highest_eggs_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.eggs_points)
+    def get_highest_eggs_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.eggs_points)
 
-    def get_highest_cached_food_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.cached_food_points)
+    def get_highest_cached_food_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.cached_food_points)
 
-    def get_highest_tucked_cards_points(self, match: Match | str | None = None) -> list[Row]:
-        return self._get_highest_score(match, Score.tucked_cards_points)
+    def get_highest_tucked_cards_points(self, channel_id: int, match: Match | str | None = None) -> list[Row]:
+        return self._get_highest_score(channel_id, match, Score.tucked_cards_points)
 
-    def _get_highest_score(self, match: Match | str | None, score_type: Type[Column[Integer]]) -> list[Row]:
+    def _get_highest_score(
+            self, channel_id: int, match: Match | str | None, score_type: Type[Column[Integer]]) -> list[Row]:
         with self.Session() as session:
             max_score = select(func.max(score_type))
             statement = select(Score.player_name, score_type)
+            matches_in_channel = select(Monitor.match_id).filter(Monitor.channel == channel_id)
+            statement = statement.filter(Score.match_id.in_(matches_in_channel.scalar_subquery()))
+            max_score = max_score.filter(Score.match_id.in_(matches_in_channel.scalar_subquery()))
             if match is not None:
                 statement = statement.filter(Score.match_id == str(match))
                 max_score = max_score.filter(Score.match_id == str(match))

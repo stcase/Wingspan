@@ -137,15 +137,17 @@ class DataController:
             self.db.remove_subscription(channel, subscriber_id, wingspan_name)
             return True
 
-    def get_highest_scores(self, match: str | Match | None = None) -> ScoreStats:
+    def get_highest_scores(self, channel_id: int, match: str | Match | None = None) -> ScoreStats:
         return ScoreStats(
-            highest_score=PlayerStat.from_scores(self.db.get_highest_score(match)),
-            highest_bird_points=PlayerStat.from_scores(self.db.get_highest_bird_points(match)),
-            highest_bonus_card_points=PlayerStat.from_scores(self.db.get_highest_bonus_card_points(match)),
-            highest_goal_points=PlayerStat.from_scores(self.db.get_highest_goals_points(match)),
-            highest_eggs_points=PlayerStat.from_scores(self.db.get_highest_eggs_points(match)),
-            highest_cached_food_points=PlayerStat.from_scores(self.db.get_highest_cached_food_points(match)),
-            highest_tucked_card_points=PlayerStat.from_scores(self.db.get_highest_tucked_cards_points(match))
+            highest_score=PlayerStat.from_scores(self.db.get_highest_score(channel_id, match)),
+            highest_bird_points=PlayerStat.from_scores(self.db.get_highest_bird_points(channel_id, match)),
+            highest_bonus_card_points=PlayerStat.from_scores(self.db.get_highest_bonus_card_points(channel_id, match)),
+            highest_goal_points=PlayerStat.from_scores(self.db.get_highest_goals_points(channel_id, match)),
+            highest_eggs_points=PlayerStat.from_scores(self.db.get_highest_eggs_points(channel_id, match)),
+            highest_cached_food_points=PlayerStat.from_scores(
+                self.db.get_highest_cached_food_points(channel_id, match)),
+            highest_tucked_card_points=PlayerStat.from_scores(
+                self.db.get_highest_tucked_cards_points(channel_id, match))
         )
 
     def get_fastest_player(self, channel_id: int, match: str | Match | None = None) -> FastestPlayer | None:

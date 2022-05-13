@@ -62,39 +62,62 @@ class TestDBConnection:
         assert len(db.get_scores(game_in_progress_obj)) == 5
 
     def test_get_highest_score_empty(self, db: DBConnection) -> None:
-        assert len(list(db.get_highest_score())) == 0
+        assert len(list(db.get_highest_score(1))) == 0
 
     def test_get_highest_bird_points_empty_with_match(self, db: DBConnection) -> None:
-        assert len(list(db.get_highest_bird_points("non-existent-match"))) == 0
+        assert len(list(db.get_highest_bird_points(1, "non-existent-match"))) == 0
 
     def test_get_highest_bonus_card_points_multiple_entries(
             self, db: DBConnection, game_in_progress_obj: Match, game_completed_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
+        db.add_match(channel=1, match_id=str(game_in_progress_obj))
         db.add_or_update_score(game_completed_obj)
         db.add_or_update_score(game_in_progress_obj)
-        assert iterable_to_scalar(db.get_highest_bonus_card_points())[1] == 14
+        assert iterable_to_scalar(db.get_highest_bonus_card_points(1))[1] == 14
 
     def test_get_highest_goals_points_multiple_entries_with_match(
             self, db: DBConnection, game_in_progress_obj: Match, game_completed_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
+        db.add_match(channel=1, match_id=str(game_in_progress_obj))
         db.add_or_update_score(game_completed_obj)
         db.add_or_update_score(game_in_progress_obj)
-        assert iterable_to_scalar(db.get_highest_eggs_points(game_completed_obj))[1] == 29
+        assert iterable_to_scalar(db.get_highest_eggs_points(1, game_completed_obj))[1] == 29
 
     def test_get_highest_eggs_points_missing_match(self, db: DBConnection, game_completed_obj: Match) -> None:
         db.add_or_update_score(game_completed_obj)
-        assert len(db.get_highest_eggs_points("non-existent-match")) == 0
+        assert len(db.get_highest_eggs_points(1, "non-existent-match")) == 0
 
     def test_get_highest_cached_food_points_multiple_games(
             self, db: DBConnection, game_completed_obj: Match, game_in_progress_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
+        db.add_match(channel=1, match_id=str(game_in_progress_obj))
         db.add_or_update_score(game_completed_obj)
         db.add_or_update_score(game_in_progress_obj)
-        assert iterable_to_scalar(db.get_highest_cached_food_points("in-progress-match-id"))[1] == 4
-        assert iterable_to_scalar(db.get_highest_cached_food_points("completed-match-id"))[1] == 9
+        assert iterable_to_scalar(db.get_highest_cached_food_points(1, "in-progress-match-id"))[1] == 4
+        assert iterable_to_scalar(db.get_highest_cached_food_points(1, "completed-match-id"))[1] == 9
 
     def test_get_highest_tucked_card_points_tie(self, db: DBConnection, game_completed_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
         db.add_or_update_score(game_completed_obj)
-        scores = list(db.get_highest_tucked_cards_points())
+        scores = list(db.get_highest_tucked_cards_points(1))
         assert len(scores) == 2
         assert scores[0][1] == scores[1][1] == 11
+
+    def test_get_highest_cached_food_points_multiple_channels(
+            self, db: DBConnection, game_completed_obj: Match, game_in_progress_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
+        db.add_match(channel=2, match_id=str(game_in_progress_obj))
+        db.add_or_update_score(game_completed_obj)
+        db.add_or_update_score(game_in_progress_obj)
+        assert iterable_to_scalar(db.get_highest_cached_food_points(2))[1] == 4
+
+    def test_get_highest_cached_food_points_wrong_channel(
+            self, db: DBConnection, game_completed_obj: Match, game_in_progress_obj: Match) -> None:
+        db.add_match(channel=1, match_id=str(game_completed_obj))
+        db.add_match(channel=2, match_id=str(game_in_progress_obj))
+        db.add_or_update_score(game_completed_obj)
+        db.add_or_update_score(game_in_progress_obj)
+        assert len(db.get_highest_cached_food_points(2, str(game_completed_obj))) == 0
 
     @freeze_time("2022-1-1")
     def test_get_data_start(self, db: DBConnection) -> None:
