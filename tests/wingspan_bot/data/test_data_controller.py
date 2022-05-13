@@ -3,13 +3,42 @@ from unittest.mock import MagicMock, call
 import pytest
 from freezegun import freeze_time
 
-from discord.data.data_controller import DataController
-from discord.data.data_objects import FastestPlayer, PlayerStat
-from discord.data.models import MessageType
+from wingspan_bot.data.data_controller import DataController
+from wingspan_bot.data.data_objects import FastestPlayer, PlayerStat
+from wingspan_bot.data.models import MessageType
 from tests.conftest import MessageTestData
 
 
 class TestDataController:
+    @pytest.mark.parametrize("channel,monitored,expected", (
+        (None, True, {1: ["game1", "game2", "game3"], 2: ["game1", "game4"]}),
+        (1, True, ["game1", "game2", "game3"]),
+        (None, False, {1: ["game1", "game2", "game3"], 2: ["game1", "game4"]}),
+        (2, False, ["game1", "game4"]),
+    ))
+    def test_get_monitored_matches(
+            self,
+            dc_monitor_many: DataController,
+            channel: int,
+            monitored: bool,
+            expected: list[str] | dict[int, list[str]]) -> None:
+        assert dc_monitor_many.get_monitored_matches(channel, monitored) == expected
+
+    @pytest.mark.parametrize("channel,monitored,expected", (
+        (None, True, {1: ["game2", "game3"], 2: ["game1", "game4"]}),
+        (1, True, ["game2", "game3"]),
+        (None, False, {1: ["game1", "game2", "game3"], 2: ["game1", "game4"]}),
+        (1, False, ["game1", "game2", "game3"]),
+    ))
+    def test_get_monitored_matches_removed(
+            self,
+            dc_monitor_many: DataController,
+            channel: int,
+            monitored: bool,
+            expected: list[str] | dict[int, list[str]]) -> None:
+        dc_monitor_many.remove(1, "game1")
+        assert dc_monitor_many.get_monitored_matches(channel, monitored) == expected
+
     def test_get_all_matches(self, dc_monitor_many: DataController) -> None:
         dc_monitor_many.wapi.get_game_info.side_effect = [  # type: ignore[attr-defined]
             "game1", "game2", "game3", "game1", "game4"]

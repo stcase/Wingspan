@@ -1,4 +1,4 @@
-from discord.data.data_objects import PlayerStat
+from wingspan_bot.data.data_objects import PlayerStat
 
 
 class TestPlayerStat:

@@ -1,7 +1,7 @@
 import pytest
 
-from discord.data.data_controller import DataController
-from discord.data.models import MessageType
+from wingspan_bot.data.data_controller import DataController
+from wingspan_bot.data.models import MessageType
 from wingspan_api.wapi import Match
 
 

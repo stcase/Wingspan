@@ -3,15 +3,15 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from discord.data.db_connection import DBConnection
-from discord.data.data_controller import DataController
+from wingspan_api.wapi import Wapi
+from wingspan_bot.bot import Bot
+from wingspan_bot.data.db_connection import DBConnection
+from wingspan_bot.data.data_controller import DataController
 
 if TYPE_CHECKING:
     from configs_example import BOT_SECRET_TOKEN, DB_CONNECTION
 else:
     from configs import BOT_SECRET_TOKEN, DB_CONNECTION
-from wingspan_api.wapi import Wapi
-from discord.bot import Bot
 
 
 def main() -> None:

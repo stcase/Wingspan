@@ -25,7 +25,7 @@ Because it's easy to miss the Steam notifications, and annoying to launch the ga
 
 ## Testing
 
-Run `poetry run pytest --cov discord --cov wingspan_api` from the root of the enlistment.
+Run `poetry run pytest --cov wingspan_bot --cov wingspan_api` from the root of the enlistment.
 
 ## Running
 

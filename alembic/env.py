@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 
 from alembic import context
 
-from discord.data.models import Base
+from wingspan_bot.data.models import Base
 
 if TYPE_CHECKING:
     # TODO: create a class that handles these configs

@@ -6,9 +6,9 @@ from datetime import datetime
 from statistics import mean
 from typing import overload
 
-from discord.data.data_objects import ScoreStats, PlayerStat, FastestPlayer
-from discord.data.db_connection import DBConnection
-from discord.data.models import MessageType
+from wingspan_bot.data.data_objects import ScoreStats, PlayerStat, FastestPlayer
+from wingspan_bot.data.db_connection import DBConnection
+from wingspan_bot.data.models import MessageType
 from wingspan_api.wapi import Match, Wapi, MatchState
 
 logger = logging.getLogger(__name__)
@@ -69,16 +69,17 @@ class DataController:
         return self.db.get_data_start(channel_id, match)
 
     @overload
-    def get_monitored_matches(self, channel_id: int) -> list[str]:
+    def get_monitored_matches(self, channel_id: int, currently_monitored: bool = True) -> list[str]:
         ...
 
     @overload
-    def get_monitored_matches(self, channel_id: None = None) -> dict[int, list[str]]:
+    def get_monitored_matches(self, channel_id: None = None, currently_monitored: bool = True) -> dict[int, list[str]]:
         ...
 
-    def get_monitored_matches(self, channel_id: int | None = None) -> list[str] | dict[int, list[str]]:
+    def get_monitored_matches(
+            self, channel_id: int | None = None, currently_monitored: bool = True) -> list[str] | dict[int, list[str]]:
         channel_to_matches: dict[int, list[str]] = {}
-        for result in self.db.get_matches():
+        for result in self.db.get_matches(currently_monitored):
             if result.match_id is None or result.channel is None:
                 raise ValueError(f"Unexpected None values when getting matches for channel {channel_id}")
             channel_to_matches.setdefault(result.channel, []).append(result.match_id)

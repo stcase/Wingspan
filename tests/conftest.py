@@ -4,10 +4,11 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from freezegun import freeze_time
 
-from discord.data.data_controller import DataController
-from discord.data.db_connection import DBConnection
-from discord.data.models import Base, MessageType, StatusMessage
+from wingspan_bot.data.data_controller import DataController
+from wingspan_bot.data.db_connection import DBConnection
+from wingspan_bot.data.models import Base, MessageType, StatusMessage
 from wingspan_api.wapi import Wapi, Match, MatchState
 
 data_folder = Path("tests/data/")
@@ -93,11 +94,12 @@ def data_controller(db: DBConnection) -> DataController:
 
 @pytest.fixture
 def dc_monitor_many(data_controller: DataController) -> DataController:
-    data_controller.add(1, "game1")
-    data_controller.add(1, "game2")
-    data_controller.add(1, "game3")
-    data_controller.add(2, "game1")
-    data_controller.add(2, "game4")
+    with freeze_time("2020-01-01 01:01:01"):
+        data_controller.add(1, "game1")
+        data_controller.add(1, "game2")
+        data_controller.add(1, "game3")
+        data_controller.add(2, "game1")
+        data_controller.add(2, "game4")
     return data_controller
 
 

@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, select, delete, update, desc, func, Column
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import sessionmaker
 
-from discord.data.models import Subscription, Monitor, StatusMessage, MessageType, Score
+from wingspan_bot.data.models import Subscription, Monitor, StatusMessage, MessageType, Score
 from wingspan_api.wapi import Match
 
 
@@ -90,9 +90,12 @@ class DBConnection:
                 player_turn=player,
                 message_type=message_type))
 
-    def get_matches(self) -> list[Monitor]:
+    def get_matches(self, currently_monitored: bool = True) -> list[Monitor]:
         with self.Session() as session:
-            return session.execute(select(Monitor).filter(Monitor.removed.is_(None))).scalars().all()
+            statement = select(Monitor)
+            if currently_monitored:
+                statement = statement.filter(Monitor.removed.is_(None))
+            return session.execute(statement).scalars().all()
 
     def get_data_start(self, channel_id: int, match: str | Match | None = None) -> datetime | None:
         with self.Session() as session:

@@ -4,7 +4,7 @@ from typing import TypeVar
 
 from freezegun import freeze_time
 
-from discord.data.db_connection import DBConnection
+from wingspan_bot.data.db_connection import DBConnection
 from tests.conftest import MessageTestData
 from wingspan_api.wapi import Match
 
@@ -19,6 +19,21 @@ def iterable_to_scalar(iterable: Iterable[T]) -> T:
 
 
 class TestDBConnection:
+    def test_get_matches(self, db: DBConnection) -> None:
+        db.add_match(channel=1, match_id="match1")
+        db.add_match(channel=1, match_id="match2")
+        db.remove_match(channel=1, match_id="match1")
+        matches = db.get_matches()
+        assert len(matches) == 1
+        assert matches[0].match_id == "match2"
+
+    def test_get_matches_all(self, db: DBConnection) -> None:
+        db.add_match(channel=1, match_id="match1")
+        db.add_match(channel=1, match_id="match2")
+        db.remove_match(channel=1, match_id="match1")
+        matches = db.get_matches(currently_monitored=False)
+        assert len(matches) == 2
+
     def test_get_previous_message_empty(self, db: DBConnection) -> None:
         assert db.get_previous_message(1, "match-id") is None
 

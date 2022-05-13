@@ -7,8 +7,8 @@ from typing import Any, TYPE_CHECKING
 from nextcord.ext import commands, tasks  # type: ignore[attr-defined]
 from nextcord.ext.commands import Context
 
-from discord.data.data_controller import DataController
-from discord.data.models import MessageType
+from wingspan_bot.data.data_controller import DataController
+from wingspan_bot.data.models import MessageType
 from wingspan_api.wapi import Match
 if TYPE_CHECKING:
     # TODO: create a class that handles these configs
@@ -189,7 +189,8 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
             else:
                 header = (
                     "Global channel data:\n"
-                    f"{len(self.dc.get_monitored_matches(ctx.channel.id))} matches monitored "
+                    f"{len(self.dc.get_monitored_matches(ctx.channel.id, currently_monitored=False))} "
+                    "matches monitored "
 
                 )
             header += f"since {self.dc.get_data_start(ctx.channel.id, game_id)}\n"
