@@ -26,9 +26,9 @@ Because it's easy to miss the Steam notifications, and annoying to launch the ga
 ## Creating a Windows .exe
 
 After completing the setup, you can create a windows .exe with the following command
-from a Window's machine at the project's root enlistment:
+from a Window's machine at the enlistment's root:
 ```commandline
-poetry run pyinstaller main.py --add-data "SteamworksPy64.dll;." -F --add-data "steam_appid.txt;." --add-data "steam_api64.dll;." --add-data "steam_api64.lib;."
+poetry run pyinstaller main.py -F --add-data "SteamworksPy64.dll;." --add-data "steam_appid.txt;." --add-data "steam_api64.dll;." --add-data "steam_api64.lib;."
 ```
 
 ## Testing
@@ -48,7 +48,6 @@ Run `poetry run pytest --cov wingspan_bot --cov wingspan_api` from the root of t
 - Better handling of config file when type checking
 - Get match test data for WAITING, READY, and REMINDER
 - Get test data for a matches object with a completed match
-- Automatically capture games names from tcp https://dpkt.readthedocs.io/en/latest/print_http_requests.html
 
 ## References
 Steam
