@@ -11,7 +11,7 @@ from wingspan_bot.data.db_connection import DBConnection
 from wingspan_bot.data.models import Base, MessageType, StatusMessage
 from wingspan_api.wapi import Wapi, Match, MatchState
 
-data_folder = Path("tests/data/")
+data_folder = Path(__file__).parent / "data"
 
 
 @pytest.fixture
