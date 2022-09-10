@@ -33,6 +33,18 @@ def game_completed() -> str:
 
 
 @pytest.fixture
+def game_waiting() -> str:
+    with (data_folder / "game_waiting.json").open("r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def game_waiting_for_join() -> str:
+    with (data_folder / "game_waiting_for_join.json").open("r") as f:
+        return f.read()
+
+
+@pytest.fixture
 def games() -> str:
     with (data_folder / "games.json").open("r") as f:
         return f.read()
@@ -69,10 +81,13 @@ def game_ready_obj(game_in_progress: str) -> Match:
 
 
 @pytest.fixture
-def game_waiting_obj(game_in_progress: str) -> Match:
-    match = Match.from_dict(json.loads(game_in_progress)["Match"])
-    match.State = MatchState.WAITING  # TODO, use real data
-    return match
+def game_waiting_obj(game_waiting: str) -> Match:
+    return Match.from_dict(json.loads(game_waiting)["Match"])
+
+
+@pytest.fixture
+def game_waiting_for_join_obj(game_waiting_for_join: str) -> Match:
+    return Match.from_dict(json.loads(game_waiting_for_join)["Match"])
 
 
 @pytest.fixture

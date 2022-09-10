@@ -79,9 +79,13 @@ class Bot(commands.Bot):  # type: ignore[misc]
         if message_type == MessageType.GAME_TIMEOUT:
             await send_func(f"Game {match} timed out on {player}'s{tagged_users} turn :(")
         if message_type == MessageType.WAITING:
-            await send_func(f"Game {match} is waiting to start")
+            await send_func(f"Game {match} is waiting to start. {player}'s{tagged_users} turn"
+                            if player is not None else
+                            f"Game {match} is waiting to start. Waiting for player to join.")
         if message_type == MessageType.READY:
-            await send_func(f"Game {match} is ready to start")
+            await send_func(f"Game {match} is ready to start. {player}'s{tagged_users} turn"
+                            if player is not None else
+                            f"Game {match} is ready to start. Unknown player's turn.")
         if message_type == MessageType.NEW_TURN:
             await send_func(
                 f"It's {player}'s{tagged_users} turn with {hours_remaining:.2f}"

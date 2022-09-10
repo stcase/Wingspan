@@ -100,7 +100,7 @@ class TestDataControllerMessages:
     @pytest.mark.parametrize(
         "sent_message, expected", [
             (None, True),
-            (("victor", MessageType.WAITING), False),
+            (("jeff", MessageType.WAITING), False),
         ])
     def test_should_send_message_waiting(
             self,
@@ -109,6 +109,20 @@ class TestDataControllerMessages:
             sent_message: tuple[str | None, MessageType] | None,
             expected: bool) -> None:
         self.helper_should_send_message(data_controller, game_waiting_obj, sent_message, expected)
+
+    @pytest.mark.parametrize(
+        "sent_message, expected", [
+            (None, True),
+            ((None, MessageType.WAITING), False),
+            (("jeff", MessageType.WAITING), True),
+        ])
+    def test_should_send_message_waiting_for_join(
+            self,
+            data_controller: DataController,
+            game_waiting_for_join_obj: Match,
+            sent_message: tuple[str | None, MessageType] | None,
+            expected: bool) -> None:
+        self.helper_should_send_message(data_controller, game_waiting_for_join_obj, sent_message, expected)
 
     @pytest.mark.parametrize(
         "sent_message, expected", [

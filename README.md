@@ -46,7 +46,7 @@ Run `poetry run pytest --cov wingspan_bot --cov wingspan_api` from the root of t
 - Fix tagged users text (add parenthesis and spacing)
 - Caching in get_matches
 - Better handling of config file when type checking
-- Get match test data for WAITING, READY, and REMINDER
+- Get match test data for READY, and REMINDER
 - Get test data for a matches object with a completed match
 
 ## References
