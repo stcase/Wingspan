@@ -10,10 +10,10 @@ requests = "^2.26.0"
 dataclasses-json = "^0.5.7"
 alembic = "^1.7.7"
 SQLAlchemy = "^1.4.35"
-nextcord = "^2.0.0-alpha.10"
+nextcord = "=2.0.0-alpha.10"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.5"
+pytest = "^7.2.0"
 mypy = "^0.931"
 types-requests = "^2.27.7"
 flake8 = "^4.0.1"
