@@ -199,6 +199,8 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
                 "```"
                 f"{self.dc.get_fastest_player(ctx.channel.id, game_id)}"
                 f"{self.dc.get_highest_scores(ctx.channel.id, game_id)}"
+                "\n"
+                f"{self.dc.get_player_turn_timings(ctx.channel.id, game_id)}"
                 "```"
             )
         except BaseException:

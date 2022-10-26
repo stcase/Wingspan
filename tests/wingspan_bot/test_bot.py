@@ -54,14 +54,18 @@ class TestBotCommands:
         context.reply.assert_called_with(
             "Global channel data:\n"
             "3 matches monitored since 2020-01-01 01:01:01\n"
-            "```Fastest average turn time (hours): None\n"
+            "```"
+            "Fastest average turn time (hours): None\n"
             "Highest score:                     None\n"
             "Most points from birds:            None\n"
             "Most points from bonus cards:      None\n"
             "Most points from goals:            None\n"
             "Most points from eggs:             None\n"
             "Most points from cached food:      None\n"
-            "Most points from tucked cards:     None\n```")
+            "Most points from tucked cards:     None\n"
+            "\n"
+            "Hours each player commonly plays (in UTC):\n"
+            "```")
 
     async def test_stats_stop_watching(self, bot_commands: BotCommands) -> None:
         context = mock.AsyncMock()
@@ -72,11 +76,15 @@ class TestBotCommands:
         context.reply.assert_called_with(
             "Global channel data:\n"
             "3 matches monitored since 2020-01-01 01:01:01\n"
-            "```Fastest average turn time (hours): None\n"
+            "```"
+            "Fastest average turn time (hours): None\n"
             "Highest score:                     None\n"
             "Most points from birds:            None\n"
             "Most points from bonus cards:      None\n"
             "Most points from goals:            None\n"
             "Most points from eggs:             None\n"
             "Most points from cached food:      None\n"
-            "Most points from tucked cards:     None\n```")
+            "Most points from tucked cards:     None\n"
+            "\n"
+            "Hours each player commonly plays (in UTC):\n"
+            "```")

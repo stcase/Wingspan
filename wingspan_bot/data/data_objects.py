@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy.engine import Row
 
@@ -51,3 +51,43 @@ class FastestPlayer:
 
     def __str__(self) -> str:
         return f"Fastest average turn time (hours): {self.fastest_player}\n"
+
+
+@dataclass
+class TurnTiming:
+    count_by_hour: dict[int, int] = field(default_factory=dict)
+    num_bins = 4
+
+    def increment(self, hour: int) -> None:
+        if not (0 <= hour <= 23):
+            raise ValueError("Invalid hour provided")
+        self.count_by_hour[hour] = self.count_by_hour.get(hour, 0) + 1
+
+    def __str__(self) -> str:
+        bin_size = max(self.count_by_hour.values()) / self.num_bins
+        out_str = ""
+        for height in range(self.num_bins, 0, -1):
+            for hour in range(0, 24):
+                out_str += " "
+                out_str += "x" if self.count_by_hour.get(hour, 0) > bin_size * (height - 1) else " "
+                out_str += " "
+            out_str += "\n"
+        out_str += "-" * 24 * 3 + "\n"
+        for hour in range(0, 24):
+            out_str += f"{hour : ^3}"
+        out_str += "\n"
+        return out_str
+
+
+@dataclass
+class PlayerTurnTimings:
+    player_turn_timings: dict[str, TurnTiming] = field(default_factory=dict)
+
+    def increment_timing(self, player: str, hour: int) -> None:
+        self.player_turn_timings.setdefault(player, TurnTiming()).increment(hour=hour)
+
+    def __str__(self) -> str:
+        out_str = "Hours each player commonly plays (in UTC):\n"
+        out_str += ("\n".join([f"{player}:\n{player_turn_timing}"
+                               for player, player_turn_timing in self.player_turn_timings.items()]))
+        return out_str

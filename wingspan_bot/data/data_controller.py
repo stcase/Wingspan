@@ -4,9 +4,9 @@ import traceback
 from collections.abc import Iterator
 from datetime import datetime
 from statistics import mean
-from typing import overload
+from typing import overload, Callable
 
-from wingspan_bot.data.data_objects import ScoreStats, PlayerStat, FastestPlayer
+from wingspan_bot.data.data_objects import ScoreStats, PlayerStat, FastestPlayer, PlayerTurnTimings
 from wingspan_bot.data.db_connection import DBConnection
 from wingspan_bot.data.models import MessageType
 from wingspan_api.wapi import Match, Wapi, MatchState
@@ -150,25 +150,45 @@ class DataController:
                 self.db.get_highest_tucked_cards_points(channel_id, match))
         )
 
-    def get_fastest_player(self, channel_id: int, match: str | Match | None = None) -> FastestPlayer | None:
-        match_to_last_player: dict[str, tuple[str, datetime]] = {}
-        times_for_turn: dict[str, list[float]] = {}
+    def _scan_turns(
+            self,
+            update_func: Callable[[tuple[str | None, datetime], tuple[str | None, datetime]], None],
+            channel_id: int,
+            match: str | Match | None = None) -> None:
+        """
+        Scans through messages in order, and calls `update_func` every time it's a new person's turn
+        :param update_func: Funciton to be called every time the messages show that it's a new player's turn.
+                            Called with the previous username and datetime, and the new username and datetime.
+        :param channel_id: discord channel to get messages from
+        :param match: match to get messages from. If None, get all messages from the channel
+        """
+        match_to_last_player: dict[str, tuple[str | None, datetime]] = {}
         for message in self.db.get_messages(channel_id, match):
             if message.datetime is None or message.match_id is None:
-                raise ValueError("Unexpected None values when getting fastest player"
-                                 f"for channel {channel_id}, match {match}")
+                raise ValueError("Unexpected None values when getting message history "
+                                 f"for channel {channel_id}, match {match}.")
             if message.match_id not in match_to_last_player:
                 if message.player_turn is not None:
                     match_to_last_player[message.match_id] = (message.player_turn, message.datetime)
                 continue
-            if (message.message_type != MessageType.GAME_COMPLETE and
-                    (message.player_turn is None or message.player_turn == match_to_last_player[message.match_id][0])):
+            if message.message_type != MessageType.GAME_COMPLETE and message.player_turn is None:
                 continue
+            if message.player_turn == match_to_last_player[message.match_id][0]:
+                continue
+            update_func(match_to_last_player[message.match_id], (message.player_turn, message.datetime))
+            match_to_last_player[message.match_id] = (message.player_turn, message.datetime)
+
+    def get_fastest_player(self, channel_id: int, match: str | Match | None = None) -> FastestPlayer | None:
+        times_for_turn: dict[str, list[float]] = {}
+
+        def update_func(last_player: tuple[str | None, datetime], new_player: tuple[str | None, datetime]) -> None:
+            if last_player[0] is None:
+                raise ValueError("Unexpected None for last_player")
             times_for_turn.setdefault(
-                match_to_last_player[message.match_id][0], []).append(
-                (message.datetime - match_to_last_player[message.match_id][1]).total_seconds() / 60 / 60)
-            if message.player_turn is not None:
-                match_to_last_player[message.match_id] = (message.player_turn, message.datetime)
+                last_player[0], []).append(
+                (new_player[1] - last_player[1]).total_seconds() / 60 / 60)
+
+        self._scan_turns(update_func, channel_id=channel_id, match=match)
 
         fastest_players: list[str] = []
         fastest_avg: float = 0
@@ -181,3 +201,15 @@ class DataController:
                 fastest_players.append(last_player)
 
         return FastestPlayer(fastest_player=PlayerStat(wingspan_names=fastest_players, score=fastest_avg))
+
+    def get_player_turn_timings(self, channel_id: int, match: str | Match | None = None) -> PlayerTurnTimings:
+        player_turn_timings = PlayerTurnTimings()
+
+        def update_func(last_player: tuple[str | None, datetime], new_player: tuple[str | None, datetime]) -> None:
+            if last_player[0] is None:
+                raise ValueError("Unexpected None for last_player")
+            player_turn_timings.increment_timing(player=last_player[0], hour=new_player[1].hour)
+
+        self._scan_turns(update_func=update_func, channel_id=channel_id, match=match)
+
+        return player_turn_timings
