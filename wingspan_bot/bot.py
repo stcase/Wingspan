@@ -199,10 +199,16 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
                 "```"
                 f"{self.dc.get_fastest_player(ctx.channel.id, game_id)}"
                 f"{self.dc.get_highest_scores(ctx.channel.id, game_id)}"
-                "\n"
-                f"{self.dc.get_player_turn_timings(ctx.channel.id, game_id)}"
                 "```"
             )
+            for player, turn_timing in self.dc.get_player_turn_timings(
+                    ctx.channel.id, game_id).player_turn_timings.items():
+                await ctx.reply(
+                    f"Hours {player} often plays (in UTC){'' if game_id is None else f' in match {game_id}'}:\n"
+                    "```"
+                    f"{turn_timing}"
+                    "```"
+                )
         except BaseException:
             await _handle_error(ctx.reply, f"getting stats for match {game_id}")
 
