@@ -257,6 +257,24 @@ class TestDataController:
             data_controller.add_message(match="match2", channel=1, player="player2", message_type=MessageType.NEW_TURN)
         with freeze_time("2022-1-2 3:10"):
             data_controller.add_message(match="match1", channel=1, player=None, message_type=MessageType.GAME_COMPLETE)
+
+        assert (data_controller.get_player_turn_timings(channel_id=1) ==
+               PlayerTurnTimings({"player1": TurnTiming({2: 2, 3: 1, 5: 1}), "player2": TurnTiming({2: 1, 5: 1})}))
+
+    def test_turn_timings_error(self, data_controller: DataController) -> None:
+        with freeze_time("2022-1-1 4:10"):
+            data_controller.add_message(match="match1", channel=1, player="player1", message_type=MessageType.NEW_TURN)
+            data_controller.add_message(match="match2", channel=1, player="player2", message_type=MessageType.NEW_TURN)
+        with freeze_time("2022-1-1 5:10"):
+            data_controller.add_message(match="match1", channel=1, player="player2", message_type=MessageType.NEW_TURN)
+            data_controller.add_message(match="match2", channel=1, player="player1", message_type=MessageType.NEW_TURN)
+        with freeze_time("2022-1-1 6:10"):
+            data_controller.add_message(match="match1", channel=1, player=None, message_type=MessageType.ERROR)
+        with freeze_time("2022-1-2 2:10"):
+            data_controller.add_message(match="match1", channel=1, player="player1", message_type=MessageType.NEW_TURN)
+            data_controller.add_message(match="match2", channel=1, player="player2", message_type=MessageType.NEW_TURN)
+        with freeze_time("2022-1-2 3:10"):
+            data_controller.add_message(match="match1", channel=1, player=None, message_type=MessageType.GAME_COMPLETE)
         with freeze_time("2022-1-2 4:10"):
             data_controller.add_message(match="match1", channel=1, player=None, message_type=MessageType.ERROR)
             data_controller.add_message(match="match2", channel=1, player=None, message_type=MessageType.ERROR)
@@ -265,7 +283,7 @@ class TestDataController:
             data_controller.add_message(match="match2", channel=1, player="player2", message_type=MessageType.NEW_TURN)
 
         assert (data_controller.get_player_turn_timings(channel_id=1) ==
-               PlayerTurnTimings({"player1": TurnTiming({2: 2, 3: 1, 5: 1}), "player2": TurnTiming({2: 1, 5: 1})}))
+               PlayerTurnTimings({"player1": TurnTiming({2: 1, 3: 1, 5: 1}), "player2": TurnTiming({2: 1, 5: 1})}))
 
     def test_get_player_turn_timings_match(self, data_controller: DataController) -> None:
         with freeze_time("2022-1-1 1:10"):
