@@ -38,3 +38,9 @@ jobs:
     - name: Test with pytest
       run: |
         poetry run pytest --cov wingspan_bot --cov wingspan_api
+    - name: Discord notification
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      uses: Ilshidur/action-discord@0.3.2
+      with:
+        args: 'A new version of Wingspan Police is ready for duty!'
