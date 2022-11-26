@@ -43,9 +43,9 @@ def main() -> None:
         pass
 
     if args.info is not None:
-        print_game_info(args.info)
+        print_game_info(args.info.lstrip('MatchID='))
     elif args.save is not None:
-        save_game_info(args.save[0], args.save[1])
+        save_game_info(args.save[0].lstrip('MatchID='), args.save[1])
     elif args.bot:
         run_bot()
     else:
