@@ -11,6 +11,11 @@ __pycache__
 steam_api64.dll
 steam_api64.lib
 SteamworksPy64.dll
+SteamworksPy.so
+libsteam_api.so
+steamworks.py
+
+.vscode
 
 #pyinstaller
 /build
