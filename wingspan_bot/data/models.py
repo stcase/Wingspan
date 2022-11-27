@@ -21,6 +21,7 @@ class MessageType(enum.Enum):
     REMINDER = "reminder"
     GAME_COMPLETE = "complete"
     GAME_TIMEOUT = "timeout"
+    GAME_FORFEIT = "forfeit"
     WAITING = "waiting"
     READY = "ready"
 

@@ -57,6 +57,8 @@ class DataController:
             return MessageType.READY
         if match.is_timed_out():
             return MessageType.GAME_TIMEOUT
+        if match.is_forfeit():
+            return MessageType.GAME_FORFEIT
         if match.State == MatchState.COMPLETED:
             return MessageType.GAME_COMPLETE
         if match.hours_remaining is None:
@@ -64,6 +66,12 @@ class DataController:
         if match.hours_remaining <= 24:
             return MessageType.REMINDER
         return MessageType.NEW_TURN
+
+    @staticmethod
+    def get_forfeit_by(match: Match | str) -> str | None:
+        if isinstance(match, str):
+            return None
+        return match.forfeit_by
 
     def get_data_start(self, channel_id: int, match: Match | str | None = None) -> datetime | None:
         return self.db.get_data_start(channel_id, match)

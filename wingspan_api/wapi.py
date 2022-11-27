@@ -44,7 +44,8 @@ class Score(DataClassJsonMixin):
 
 @dataclass
 class OutcomeData(DataClassJsonMixin):
-    Winner: str
+    Winner: str | None = None
+    ForfeitUser: str | None = None
 
 
 @dataclass
@@ -86,6 +87,11 @@ class Match(DataClassJsonMixin):
         """
         return self.State == MatchState.COMPLETED and self.OutcomeData is None and self.StateData is not None
 
+    def is_forfeit(self) -> bool:
+        return (self.State == MatchState.COMPLETED and
+                self.OutcomeData is not None and
+                self.OutcomeData.ForfeitUser is not None)
+
     def get_player(self, player_id: str) -> Player | None:
         for player in self.Players:
             if player.ChilliConnectID == player_id:
@@ -118,6 +124,14 @@ class Match(DataClassJsonMixin):
                 raise ValueError("Unexpected game state")
             return self.WaitingTimeout.SecondsRemaining / 60 / 60
         return None
+
+    @property
+    def forfeit_by(self) -> str | None:
+        if not self.is_forfeit():
+            return None
+        if self.OutcomeData is None or self.OutcomeData.ForfeitUser is None:
+            raise ValueError("No OutcomeData.ForfeitUser unexpectedly present")
+        return self.get_player_username(self.OutcomeData.ForfeitUser)
 
     def __str__(self) -> str:
         return self.MatchID

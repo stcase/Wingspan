@@ -19,6 +19,7 @@ class TestWapi:
              game_in_progress: str,
              game_completed: str,
              game_timed_out: str,
+             game_forfeited: str,
              games: str) -> Wapi:
         class MockRequest:
             def __init__(self, path: str, data: dict[str, str]) -> None:
@@ -32,6 +33,8 @@ class TestWapi:
                         self.result = json.loads(game_completed)
                     elif match_id == "timed-out-match-id":
                         self.result = json.loads(game_timed_out)
+                    elif match_id == "forfeit-match-id":
+                        self.result = json.loads(game_forfeited)
                     else:
                         raise ValueError(f"Unexpected match id: {match_id}")
 
@@ -74,3 +77,13 @@ class TestWapi:
             ("completed-match-id", False)])
     def test_is_timed_out(self, wapi: Wapi, game_id: str, expected: bool) -> None:
         assert wapi.get_game_info(game_id).is_timed_out() == expected
+
+    @pytest.mark.parametrize(
+        "game_id,expected", [
+            ("forfeit-match-id", "jeff"),
+            ("in-progress-match-id", None),
+            ("completed-match-id", None)])
+    def test_forfeit_by(self, wapi: Wapi, game_id: str, expected: str | None) -> None:
+        g_info = wapi.get_game_info(game_id)
+        assert g_info.is_forfeit() == (expected is not None)
+        assert g_info.forfeit_by == expected

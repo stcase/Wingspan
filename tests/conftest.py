@@ -33,6 +33,12 @@ def game_completed() -> str:
 
 
 @pytest.fixture
+def game_forfeited() -> str:
+    with (data_folder / "game_forfeit.json").open("r") as f:
+        return f.read()
+
+
+@pytest.fixture
 def game_waiting() -> str:
     with (data_folder / "game_waiting.json").open("r") as f:
         return f.read()
@@ -71,6 +77,11 @@ def game_timed_out_obj(game_timed_out: str) -> Match:
 @pytest.fixture
 def game_completed_obj(game_completed: str) -> Match:
     return Match.from_dict(json.loads(game_completed)["Match"])
+
+
+@pytest.fixture
+def game_forfeit_obj(game_forfeited: str) -> Match:
+    return Match.from_dict(json.loads(game_forfeited)["Match"])
 
 
 @pytest.fixture

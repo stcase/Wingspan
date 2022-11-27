@@ -28,6 +28,9 @@ class TestDataControllerMessages:
     def test_get_message_timed_out(self, data_controller: DataController, game_timed_out_obj: Match) -> None:
         assert data_controller.get_message_type(game_timed_out_obj) == MessageType.GAME_TIMEOUT
 
+    def test_get_message_forfeited(self, data_controller: DataController, game_forfeit_obj: Match) -> None:
+        assert data_controller.get_message_type(game_forfeit_obj) == MessageType.GAME_FORFEIT
+
     def helper_should_send_message(
             self,
             data_controller: DataController,
@@ -149,3 +152,15 @@ class TestDataControllerMessages:
             sent_message: tuple[str | None, MessageType] | None,
             expected: bool) -> None:
         self.helper_should_send_message(data_controller, "error", sent_message, expected)
+
+    def test_get_forfeit_by(self, data_controller: DataController, game_forfeit_obj: Match) -> None:
+        assert data_controller.get_forfeit_by(game_forfeit_obj) == "jeff"
+
+    def test_get_forfeit_by_in_progress(self, data_controller: DataController, game_in_progress_obj: Match) -> None:
+        assert data_controller.get_forfeit_by(game_in_progress_obj) is None
+
+    def test_get_forfeit_by_not_forfeit(self, data_controller: DataController, game_completed_obj: Match) -> None:
+        assert data_controller.get_forfeit_by(game_completed_obj) is None
+
+    def test_get_forfeit_string(self, data_controller: DataController) -> None:
+        assert data_controller.get_forfeit_by("match-id") is None
