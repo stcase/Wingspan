@@ -129,6 +129,7 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
 
     @commands.command()  # type: ignore[misc]
     async def add(self, ctx: Context, game_id: str) -> None:
+        game_id = game_id.replace('MatchID=', '')
         """ Add the game_id to be monitored """
         await self.command_template(
             ctx,
@@ -141,6 +142,7 @@ class BotCommands(commands.Cog):  # type: ignore[misc]
     @commands.command()  # type: ignore[misc]
     async def remove(self, ctx: Context, game_id: str) -> None:
         """ Remove the game_id from being monitored """
+        game_id = game_id.replace('MatchID=', '')
         await self.command_template(
             ctx,
             lambda: self.dc.remove(ctx.channel.id, game_id),
